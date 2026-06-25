@@ -59,13 +59,37 @@ func main() {
         ),
     )
 
+    // Write to file (supports resume)
     maker.
         Source("invoice.docx").
         OptionalPrompt("Buat template invoice dengan nomor, tanggal, customer, items, total").
         Resume(true).
         Run("templates/invoice.dcd")
+
+    // Or get raw string (no file write, no resume)
+    dcd, err := maker.Generate()
 }
 ```
+
+### PredictableKeys
+
+Control variable names and structure — AI forced to use exact keys:
+
+```go
+maker.
+    Source("invoice.docx").
+    PredictableKeys(
+        dcdmaker.Object("info", "invoice_no", "date", "customer", "due_date"),
+        dcdmaker.Array("items", "name", "qty", "unit_price", "total"),
+        dcdmaker.Object("summary", "subtotal", "tax", "grand_total"),
+    ).
+    Run("templates/invoice.dcd")
+```
+
+- `Object(name, fields...)` — singleton object, accessed as `{{name.field}}`
+- `Array(name, fields...)` — array of objects for `<loop>`, accessed as `{{x.field}}`
+
+Additional fields found in the document are written to `[object-unpredictable]` and `[keys-unpredictable]` sections.
 
 ### Fallback by model
 
@@ -115,8 +139,6 @@ DOCX ──> dcdmaker ──> AI (Gemini / OpenAI) ──> .dcd template
 
 ## Output: `.dcd` Template
 
-The generated DCD template is a structured document definition:
-
 ```ini
 [style]
 layout=A4
@@ -141,17 +163,23 @@ keys=invoice_no, date, customer
 
 [section 1]
 name=items
-var=info, line_items
-keys=items.name, items.qty, items.price
+var=info, items
+keys=title, items.name, items.qty, items.price
 
 --- BODY ---
 <table border=1 width=100%>
-<loop:row x from line_items>
+<loop:row x from items>
   <col>{{x.name}}</col>
   <col align=right>{{x.qty}}</col>
   <col align=right>{{x.price}}</col>
 </loop:row>
 </table>
+
+[object-unpredictable]
+- info=discount, shipping_address
+
+[keys-unpredictable]
+- data=po_number, department
 ```
 
 ## Development

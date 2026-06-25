@@ -7,11 +7,33 @@ import (
 	"strings"
 )
 
+type VarType int
+
+const (
+	VarObject VarType = iota
+	VarArray
+)
+
+type KeyDef struct {
+	Name   string
+	Type   VarType
+	Fields []string
+}
+
+func Object(name string, fields ...string) KeyDef {
+	return KeyDef{Name: name, Type: VarObject, Fields: fields}
+}
+
+func Array(name string, fields ...string) KeyDef {
+	return KeyDef{Name: name, Type: VarArray, Fields: fields}
+}
+
 type Maker struct {
-	providers  []Provider
-	source     string
-	userPrompt string
-	resume     bool
+	providers       []Provider
+	source          string
+	userPrompt      string
+	resume          bool
+	predictableKeys []KeyDef
 }
 
 func NewMaker(providers ...Provider) *Maker {
@@ -32,6 +54,11 @@ func (m *Maker) OptionalPrompt(p string) *Maker {
 
 func (m *Maker) Resume(enabled bool) *Maker {
 	m.resume = enabled
+	return m
+}
+
+func (m *Maker) PredictableKeys(keys ...KeyDef) *Maker {
+	m.predictableKeys = keys
 	return m
 }
 
@@ -56,7 +83,7 @@ func (m *Maker) Run(output string) error {
 		return fmt.Errorf("dcdmaker: read source: %w", err)
 	}
 
-	prompt := buildPrompt(m.userPrompt)
+	prompt := buildPrompt(m.userPrompt, m.predictableKeys)
 
 	ctx := context.Background()
 
@@ -71,7 +98,6 @@ func (m *Maker) Run(output string) error {
 			}
 
 			result = resolveChunks(ctx, provider, result)
-
 			result = sanitizeDCD(result)
 
 			if isDCDValid(result) {
@@ -91,7 +117,7 @@ func (m *Maker) Run(output string) error {
 		}
 
 		if pi < len(m.providers)-1 {
-			prompt = buildPrompt(m.userPrompt)
+			prompt = buildPrompt(m.userPrompt, m.predictableKeys)
 			continue
 		}
 

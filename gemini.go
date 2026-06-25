@@ -8,8 +8,6 @@ import (
 	"google.golang.org/genai"
 )
 
-const docxMIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-
 type geminiProvider struct {
 	cfg    *geminiConfig
 	client *genai.Client
@@ -84,10 +82,12 @@ func (p *geminiProvider) Generate(ctx context.Context, prompt string) (string, e
 }
 
 func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	return p.generateContent(ctx, []*genai.Part{
-		{Text: prompt},
-		{InlineData: &genai.Blob{Data: data, MIMEType: docxMIME}},
-	})
+	text := extractDocxText(data)
+	fullPrompt := fmt.Sprintf(
+		"Here is the content of a DOCX document:\n\n---\n%s\n---\n\n%s",
+		text, prompt,
+	)
+	return p.generateContent(ctx, []*genai.Part{{Text: fullPrompt}})
 }
 
 func (p *geminiProvider) GenerateWithHistory(ctx context.Context, history []Message, prompt string) (string, error) {

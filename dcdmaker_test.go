@@ -299,29 +299,58 @@ func TestPredictableKeys(t *testing.T) {
 	if len(m.predictableKeys) != 3 {
 		t.Fatalf("expected 3 keys, got %d", len(m.predictableKeys))
 	}
+}
 
-	tests := []struct {
-		idx    int
-		name   string
-		vtype  VarType
-		fields int
-	}{
-		{0, "info", VarObject, 3},
-		{1, "items", VarArray, 3},
-		{2, "summary", VarObject, 3},
+func TestAddPredictableKeys(t *testing.T) {
+	m := NewMaker()
+	m.AddPredictableKeys(Object("info", "a", "b"))
+	m.AddPredictableKeys(Array("items", "x", "y"))
+	m.AddPredictableKeys(Object("summary", "z"))
+
+	if len(m.predictableKeys) != 3 {
+		t.Fatalf("expected 3 keys after 3 adds, got %d", len(m.predictableKeys))
+	}
+	if m.predictableKeys[0].Name != "info" {
+		t.Errorf("first key = %q, want %q", m.predictableKeys[0].Name, "info")
+	}
+	if m.predictableKeys[1].Name != "items" {
+		t.Errorf("second key = %q, want %q", m.predictableKeys[1].Name, "items")
+	}
+	if m.predictableKeys[2].Name != "summary" {
+		t.Errorf("third key = %q, want %q", m.predictableKeys[2].Name, "summary")
+	}
+}
+
+func TestAddPredictableKeysFromLoop(t *testing.T) {
+	type reqKey struct {
+		Name   string
+		Type   string
+		Fields []string
+	}
+	reqKeys := []reqKey{
+		{Name: "info", Type: "object", Fields: []string{"a", "b"}},
+		{Name: "items", Type: "array", Fields: []string{"x", "y", "z"}},
+		{Name: "summary", Type: "object", Fields: []string{"total"}},
 	}
 
-	for _, tt := range tests {
-		k := m.predictableKeys[tt.idx]
-		if k.Name != tt.name {
-			t.Errorf("keys[%d].Name = %q, want %q", tt.idx, k.Name, tt.name)
+	m := NewMaker()
+	for _, k := range reqKeys {
+		switch k.Type {
+		case "object":
+			m.AddPredictableKeys(Object(k.Name, k.Fields...))
+		case "array":
+			m.AddPredictableKeys(Array(k.Name, k.Fields...))
 		}
-		if k.Type != tt.vtype {
-			t.Errorf("keys[%d].Type = %v, want %v", tt.idx, k.Type, tt.vtype)
-		}
-		if len(k.Fields) != tt.fields {
-			t.Errorf("keys[%d].Fields = %v, want %d fields", tt.idx, k.Fields, tt.fields)
-		}
+	}
+
+	if len(m.predictableKeys) != 3 {
+		t.Fatalf("expected 3 keys, got %d", len(m.predictableKeys))
+	}
+	if m.predictableKeys[0].Type != VarObject {
+		t.Errorf("keys[0] type = %v, want VarObject", m.predictableKeys[0].Type)
+	}
+	if m.predictableKeys[1].Type != VarArray {
+		t.Errorf("keys[1] type = %v, want VarArray", m.predictableKeys[1].Type)
 	}
 }
 

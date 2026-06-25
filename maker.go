@@ -62,6 +62,11 @@ func (m *Maker) PredictableKeys(keys ...KeyDef) *Maker {
 	return m
 }
 
+func (m *Maker) AddPredictableKeys(keys ...KeyDef) *Maker {
+	m.predictableKeys = append(m.predictableKeys, keys...)
+	return m
+}
+
 func (m *Maker) Generate() (string, error) {
 	if len(m.providers) == 0 {
 		return "", fmt.Errorf("dcdmaker: at least one provider required")

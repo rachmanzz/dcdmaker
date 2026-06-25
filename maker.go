@@ -62,6 +62,30 @@ func (m *Maker) PredictableKeys(keys ...KeyDef) *Maker {
 	return m
 }
 
+func (m *Maker) Generate() (string, error) {
+	if len(m.providers) == 0 {
+		return "", fmt.Errorf("dcdmaker: at least one provider required")
+	}
+	if m.source == "" {
+		return "", fmt.Errorf("dcdmaker: source document required")
+	}
+	if m.resume {
+		return "", fmt.Errorf("dcdmaker: Resume(true) is not supported with Generate(), use Run() instead")
+	}
+
+	data, err := os.ReadFile(m.source)
+	if err != nil {
+		return "", fmt.Errorf("dcdmaker: read source: %w", err)
+	}
+
+	result, err := m.generate(data)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
 func (m *Maker) Run(output string) error {
 	if len(m.providers) == 0 {
 		return fmt.Errorf("dcdmaker: at least one provider required")
@@ -83,8 +107,19 @@ func (m *Maker) Run(output string) error {
 		return fmt.Errorf("dcdmaker: read source: %w", err)
 	}
 
-	prompt := buildPrompt(m.userPrompt, m.predictableKeys)
+	result, err := m.generate(data)
+	if err != nil {
+		return err
+	}
 
+	if m.resume {
+		_ = clearSession(output)
+	}
+	return os.WriteFile(output, []byte(result), 0644)
+}
+
+func (m *Maker) generate(data []byte) (string, error) {
+	prompt := buildPrompt(m.userPrompt, m.predictableKeys)
 	ctx := context.Background()
 
 	for pi, provider := range m.providers {
@@ -101,10 +136,7 @@ func (m *Maker) Run(output string) error {
 			result = sanitizeDCD(result)
 
 			if isDCDValid(result) {
-				if m.resume {
-					_ = clearSession(output)
-				}
-				return os.WriteFile(output, []byte(result), 0644)
+				return result, nil
 			}
 
 			lastErr = fmt.Errorf("%s attempt %d: invalid DCD output", provider.Name(), attempt+1)
@@ -121,10 +153,10 @@ func (m *Maker) Run(output string) error {
 			continue
 		}
 
-		return fmt.Errorf("dcdmaker: all providers failed: %w", lastErr)
+		return "", fmt.Errorf("dcdmaker: all providers failed: %w", lastErr)
 	}
 
-	return fmt.Errorf("dcdmaker: no providers configured")
+	return "", fmt.Errorf("dcdmaker: no providers configured")
 }
 
 func (m *Maker) resumeSession(session *Session, output string) error {

@@ -232,6 +232,54 @@ func TestRunRequiresProviders(t *testing.T) {
 	}
 }
 
+func TestGenerateReturnsString(t *testing.T) {
+	m := NewMaker(Gemini(WithAPIKey("test")))
+	m.Source("test.docx")
+	dcd, err := m.Generate()
+	if err == nil {
+		t.Fatal("expected error (no real file), but Generate() returned string:", dcd[:min(len(dcd), 50)])
+	}
+	// Should fail because file doesn't exist, not because of config
+	if err.Error() == "dcdmaker: at least one provider required" ||
+		err.Error() == "dcdmaker: source document required" {
+		t.Fatal("unexpected validation error:", err)
+	}
+}
+
+func TestGenerateRequiresSource(t *testing.T) {
+	m := NewMaker(Gemini(WithAPIKey("test")))
+	_, err := m.Generate()
+	if err == nil {
+		t.Fatal("expected error for missing source")
+	}
+}
+
+func TestGenerateRequiresProviders(t *testing.T) {
+	m := NewMaker()
+	m.Source("test.docx")
+	_, err := m.Generate()
+	if err == nil {
+		t.Fatal("expected error for missing providers")
+	}
+}
+
+func TestGenerateRejectsResume(t *testing.T) {
+	m := NewMaker(Gemini(WithAPIKey("test"))).
+		Source("test.docx").
+		Resume(true)
+	_, err := m.Generate()
+	if err == nil {
+		t.Fatal("expected error for resume with Generate()")
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func TestSessionPath(t *testing.T) {
 	path := sessionPath("templates/invoice.dcd")
 	expected := "templates/invoice.dcd.session.json"

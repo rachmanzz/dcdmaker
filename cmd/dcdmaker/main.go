@@ -40,7 +40,7 @@ func main() {
 	}
 
 	if *version {
-		fmt.Println("dcdmaker v0.1.0")
+		fmt.Println("dcdmaker v0.1.5")
 		return
 	}
 

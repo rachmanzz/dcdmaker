@@ -13,7 +13,7 @@ go get github.com/rachmanzz/dcdmaker
 ```bash
 # Generate template from invoice
 dcdmaker -source invoice.docx -output templates/invoice.dcd \
-    -prompt "Buat template invoice dengan nomor, tanggal, customer, items, total"
+    -prompt "Create invoice template with number, date, customer, items, total"
 
 # Custom Gemini model
 dcdmaker -source contract.docx -output contract.dcd \
@@ -62,7 +62,7 @@ func main() {
     // Write to file (supports resume)
     maker.
         Source("invoice.docx").
-        OptionalPrompt("Buat template invoice dengan nomor, tanggal, customer, items, total").
+        OptionalPrompt("Create invoice template with number, date, customer, items, total").
         Resume(true).
         Run("templates/invoice.dcd")
 

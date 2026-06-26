@@ -1,0 +1,45 @@
+[style]
+layout=A4
+unit=inch
+font-family="Times New Roman"
+font-size=12
+line-height=1.5
+m=1
+
+[style:table header]
+bg=#f0f0f0
+color=#000000
+font-weight=bold
+align=center
+border-bottom=1pt
+
+[section 0]
+name=invoice_details
+var=invoice, items
+keys=invoice.no, invoice.date, invoice.customer, invoice.total, items.name, items.qty, items.price
+formats=[invoice.date:yyyy-MM-dd], [invoice.total:#,##0], [items.price:#,##0]
+
+--- BODY ---
+<w:c|b>INVOICE</w:c|b>
+<p><b>Invoice No:</b> {{invoice.no}}</p>
+<p><b>Date:</b> {{invoice.date}}</p>
+<p><b>Customer:</b> {{invoice.customer}}</p>
+<br>
+<table border=1 width=100%>
+  <row style=header>
+    <col width=50%>Item</col>
+    <col width=15% align=center>Qty</col>
+    <col width=35% align=right>Price</col>
+  </row>
+  <loop:row x from items>
+    <col>{{x.name}}</col>
+    <col align=center>{{x.qty}}</col>
+    <col align=right>{{x.price}}</col>
+  </loop:row>
+</table>
+<br>
+<p align=right><b>Total:</b> {{invoice.total}}</p>
+
+[object-unpredictable]
+
+[keys-unpredictable]

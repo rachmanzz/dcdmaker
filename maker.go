@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 type VarType int
@@ -34,6 +35,7 @@ type Maker struct {
 	userPrompt      string
 	resume          bool
 	predictableKeys []KeyDef
+	lastProvider    string
 }
 
 func NewMaker(providers ...Provider) *Maker {
@@ -60,6 +62,10 @@ func (m *Maker) Resume(enabled bool) *Maker {
 func (m *Maker) PredictableKeys(keys ...KeyDef) *Maker {
 	m.predictableKeys = keys
 	return m
+}
+
+func (m *Maker) LastProvider() string {
+	return m.lastProvider
 }
 
 func (m *Maker) AddPredictableKeys(keys ...KeyDef) *Maker {
@@ -127,10 +133,20 @@ func (m *Maker) generate(data []byte) (string, error) {
 	prompt := buildPrompt(m.userPrompt, m.predictableKeys)
 	ctx := context.Background()
 
+	delays := []time.Duration{5 * time.Second, 10 * time.Second, 15 * time.Second}
+
 	for pi, provider := range m.providers {
 		var lastErr error
 
 		for attempt := range 3 {
+			if attempt > 0 {
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				case <-time.After(delays[attempt-1]):
+				}
+			}
+
 			result, err := provider.GenerateWithFile(ctx, prompt, m.source, data)
 			if err != nil {
 				lastErr = fmt.Errorf("%s attempt %d: %w", provider.Name(), attempt+1, err)
@@ -141,6 +157,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 			result = sanitizeDCD(result)
 
 			if isDCDValid(result) {
+				m.lastProvider = provider.Name()
 				return result, nil
 			}
 
@@ -202,6 +219,7 @@ func (m *Maker) resumeSession(session *Session, output string) error {
 
 		dcd := sanitizeDCD(full.String())
 		if isDCDValid(dcd) {
+			m.lastProvider = provider.Name()
 			if m.resume {
 				_ = clearSession(output)
 			}

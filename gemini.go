@@ -1,6 +1,7 @@
 package dcdmaker
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -82,12 +83,24 @@ func (p *geminiProvider) Generate(ctx context.Context, prompt string) (string, e
 }
 
 func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	text := extractDocxText(data)
-	fullPrompt := fmt.Sprintf(
-		"Here is the content of a DOCX document:\n\n---\n%s\n---\n\n%s",
-		text, prompt,
-	)
-	return p.generateContent(ctx, []*genai.Part{{Text: fullPrompt}})
+	content, err := extractDocxContent(data)
+	if err != nil {
+		return "", fmt.Errorf("gemini: extract docx: %w", err)
+	}
+
+	var b bytes.Buffer
+	b.WriteString(prompt)
+	b.WriteString("\n\n=== SOURCE DOCUMENT XML ===\n")
+	b.WriteString(content.DocumentXML)
+	b.WriteString("\n\n")
+	if !content.HasHeader {
+		b.WriteString("NOTE: The source document has NO header. Do NOT generate [header].\n")
+	}
+	if !content.HasFooter {
+		b.WriteString("NOTE: The source document has NO footer. Do NOT generate [footer].\n")
+	}
+
+	return p.generateContent(ctx, []*genai.Part{{Text: b.String()}})
 }
 
 func (p *geminiProvider) GenerateWithHistory(ctx context.Context, history []Message, prompt string) (string, error) {

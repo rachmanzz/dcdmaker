@@ -838,6 +838,7 @@ center={{date}}
 | `left`        | Left column content                    |
 | `center`      | Center column content                  |
 | `right`       | Right column content                   |
+| `justify_between` | 2 or 3 comma-separated items spread evenly via tab stops. Use `\,` for literal comma |
 | `font-family` | Header/footer font override            |
 | `font-size`   | Font size                              |
 | `color`  | Text color                             |
@@ -847,6 +848,27 @@ center={{date}}
 | `mirror`      | `true` / `false` — swap left↔right¹   |
 
 ¹ Not fully supported in v0.1.5 (library limitation).
+
+### justify_between
+
+Replaces `left`/`center`/`right` with evenly-spaced columns using OOXML tab stops.
+
+```
+[header]
+justify_between={{title}}, {{page}} / {{total}}
+
+[footer]
+justify_between=Dept. A\, B\, and C, {{date}}, Page {{page}}
+```
+
+| Items | Behavior |
+|---|---|
+| 2 items | Left-aligned + right-aligned |
+| 3 items | Left + center + right |
+
+**Comma escaping:** Use `\,` for a literal comma inside a column value (e.g. `Dept. A\, B\, and C`).
+
+Works with all header/footer variables and font styling properties.
 
 ### Variables
 
@@ -880,6 +902,29 @@ color=#666666
 border=top
 margin=0.2
 first-page=false
+```
+
+### justify_between Example
+
+```
+[style]
+layout=A4
+unit=inch
+m=1
+
+[header]
+justify_between={{title}}, {{page}} / {{total}}
+font-size=10
+color=#999999
+border=bottom
+margin=0.3
+
+[footer]
+justify_between=Dept. A\, B\, and C, {{date}}, Page {{page}}
+font-size=9
+color=#666666
+border=top
+margin=0.2
 ```
 
 ## See Also

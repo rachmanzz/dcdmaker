@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.7 (2026-06-26)
+
+### Added
+- `LastProvider() string` — returns the provider and model name (e.g. `gemini:gemini-2.5-flash`) that successfully generated the DCD template.
+
 ## v0.1.6 (2026-06-26)
 
 ### Changed
@@ -13,4 +18,3 @@
 
 ### Added
 - `docx.go` — new `extractDocxContent()` function that parses DOCX ZIP and extracts raw `word/document.xml` plus header/footer presence detection.
-- `LastProvider() string` — returns the provider and model name (e.g. `gemini:gemini-2.5-flash`) that successfully generated the DCD template.

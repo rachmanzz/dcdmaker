@@ -5,13 +5,37 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
+type VarType int
+
+const (
+	VarObject VarType = iota
+	VarArray
+)
+
+type KeyDef struct {
+	Name   string
+	Type   VarType
+	Fields []string
+}
+
+func Object(name string, fields ...string) KeyDef {
+	return KeyDef{Name: name, Type: VarObject, Fields: fields}
+}
+
+func Array(name string, fields ...string) KeyDef {
+	return KeyDef{Name: name, Type: VarArray, Fields: fields}
+}
+
 type Maker struct {
-	providers  []Provider
-	source     string
-	userPrompt string
-	resume     bool
+	providers       []Provider
+	source          string
+	userPrompt      string
+	resume          bool
+	predictableKeys []KeyDef
+	lastProvider    string
 }
 
 func NewMaker(providers ...Provider) *Maker {
@@ -35,6 +59,44 @@ func (m *Maker) Resume(enabled bool) *Maker {
 	return m
 }
 
+func (m *Maker) PredictableKeys(keys ...KeyDef) *Maker {
+	m.predictableKeys = keys
+	return m
+}
+
+func (m *Maker) LastProvider() string {
+	return m.lastProvider
+}
+
+func (m *Maker) AddPredictableKeys(keys ...KeyDef) *Maker {
+	m.predictableKeys = append(m.predictableKeys, keys...)
+	return m
+}
+
+func (m *Maker) Generate() (string, error) {
+	if len(m.providers) == 0 {
+		return "", fmt.Errorf("dcdmaker: at least one provider required")
+	}
+	if m.source == "" {
+		return "", fmt.Errorf("dcdmaker: source document required")
+	}
+	if m.resume {
+		return "", fmt.Errorf("dcdmaker: Resume(true) is not supported with Generate(), use Run() instead")
+	}
+
+	data, err := os.ReadFile(m.source)
+	if err != nil {
+		return "", fmt.Errorf("dcdmaker: read source: %w", err)
+	}
+
+	result, err := m.generate(data)
+	if err != nil {
+		return "", err
+	}
+
+	return result, nil
+}
+
 func (m *Maker) Run(output string) error {
 	if len(m.providers) == 0 {
 		return fmt.Errorf("dcdmaker: at least one provider required")
@@ -56,14 +118,35 @@ func (m *Maker) Run(output string) error {
 		return fmt.Errorf("dcdmaker: read source: %w", err)
 	}
 
-	prompt := buildPrompt(m.userPrompt)
+	result, err := m.generate(data)
+	if err != nil {
+		return err
+	}
 
+	if m.resume {
+		_ = clearSession(output)
+	}
+	return os.WriteFile(output, []byte(result), 0644)
+}
+
+func (m *Maker) generate(data []byte) (string, error) {
+	prompt := buildPrompt(m.userPrompt, m.predictableKeys)
 	ctx := context.Background()
+
+	delays := []time.Duration{5 * time.Second, 10 * time.Second, 15 * time.Second}
 
 	for pi, provider := range m.providers {
 		var lastErr error
 
 		for attempt := range 3 {
+			if attempt > 0 {
+				select {
+				case <-ctx.Done():
+					return "", ctx.Err()
+				case <-time.After(delays[attempt-1]):
+				}
+			}
+
 			result, err := provider.GenerateWithFile(ctx, prompt, m.source, data)
 			if err != nil {
 				lastErr = fmt.Errorf("%s attempt %d: %w", provider.Name(), attempt+1, err)
@@ -71,14 +154,11 @@ func (m *Maker) Run(output string) error {
 			}
 
 			result = resolveChunks(ctx, provider, result)
-
 			result = sanitizeDCD(result)
 
 			if isDCDValid(result) {
-				if m.resume {
-					_ = clearSession(output)
-				}
-				return os.WriteFile(output, []byte(result), 0644)
+				m.lastProvider = provider.Name()
+				return result, nil
 			}
 
 			lastErr = fmt.Errorf("%s attempt %d: invalid DCD output", provider.Name(), attempt+1)
@@ -91,14 +171,14 @@ func (m *Maker) Run(output string) error {
 		}
 
 		if pi < len(m.providers)-1 {
-			prompt = buildPrompt(m.userPrompt)
+			prompt = buildPrompt(m.userPrompt, m.predictableKeys)
 			continue
 		}
 
-		return fmt.Errorf("dcdmaker: all providers failed: %w", lastErr)
+		return "", fmt.Errorf("dcdmaker: all providers failed: %w", lastErr)
 	}
 
-	return fmt.Errorf("dcdmaker: no providers configured")
+	return "", fmt.Errorf("dcdmaker: no providers configured")
 }
 
 func (m *Maker) resumeSession(session *Session, output string) error {
@@ -139,6 +219,7 @@ func (m *Maker) resumeSession(session *Session, output string) error {
 
 		dcd := sanitizeDCD(full.String())
 		if isDCDValid(dcd) {
+			m.lastProvider = provider.Name()
 			if m.resume {
 				_ = clearSession(output)
 			}

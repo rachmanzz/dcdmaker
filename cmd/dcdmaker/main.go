@@ -8,6 +8,13 @@ import (
 	"github.com/rachmanzz/dcdmaker"
 )
 
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
 func main() {
 	fs := flag.NewFlagSet("dcdmaker", flag.ExitOnError)
 
@@ -15,10 +22,10 @@ func main() {
 	output := fs.String("output", "", "Output path for .dcd template")
 	prompt := fs.String("prompt", "", "Optional instruction for the AI")
 
-	geminiKey := fs.String("gemini-key", "", "Gemini API key (default: $GEMINI_API_KEY)")
-	geminiModel := fs.String("gemini-model", "gemini-2.5-flash", "Gemini model name")
+	geminiKey := fs.String("gemini-key", "", "Gemini API key")
+	geminiModel := fs.String("gemini-model", "", "Gemini model name (default: gemini-2.5-flash)")
 
-	openaiKey := fs.String("openai-key", "", "OpenAI API key (default: $OPENAI_API_KEY)")
+	openaiKey := fs.String("openai-key", "", "OpenAI API key")
 	openaiModel := fs.String("openai-model", "", "OpenAI model name")
 	openaiBaseURL := fs.String("openai-base-url", "", "OpenAI-compatible base URL")
 
@@ -33,7 +40,7 @@ func main() {
 	}
 
 	if *version {
-		fmt.Println("dcdmaker v0.1.0")
+		fmt.Println("dcdmaker v0.1.5")
 		return
 	}
 
@@ -46,26 +53,36 @@ func main() {
 	var providers []dcdmaker.Provider
 
 	if !*noGemini {
-		opts := []dcdmaker.GeminiOption{
-			dcdmaker.WithModel(*geminiModel),
+		key := *geminiKey
+		if key == "" {
+			key = envOr("GEMINI_API_KEY", envOr("AI_GEMINI_API_KEY", ""))
 		}
-		if *geminiKey != "" {
-			opts = append(opts, dcdmaker.WithAPIKey(*geminiKey))
+		model := *geminiModel
+		if model == "" {
+			model = envOr("AI_GEMINI_MODEL", "gemini-2.5-flash")
 		}
-		providers = append(providers, dcdmaker.Gemini(opts...))
+		providers = append(providers, dcdmaker.Gemini(
+			dcdmaker.WithAPIKey(key),
+			dcdmaker.WithModel(model),
+		))
 	}
 
 	if !*noOpenAI {
-		if *openaiModel != "" || *openaiKey != "" || *openaiBaseURL != "" {
+		key := *openaiKey
+		if key == "" {
+			key = envOr("OPENAI_API_KEY", "")
+		}
+		model := *openaiModel
+		baseURL := *openaiBaseURL
+
+		if key != "" || model != "" || baseURL != "" {
 			opts := []dcdmaker.OpenAIOption{}
-			if *openaiModel != "" {
-				opts = append(opts, dcdmaker.WithOpenAIModel(*openaiModel))
+			opts = append(opts, dcdmaker.WithOpenAIAPIKey(key))
+			if model != "" {
+				opts = append(opts, dcdmaker.WithOpenAIModel(model))
 			}
-			if *openaiKey != "" {
-				opts = append(opts, dcdmaker.WithOpenAIAPIKey(*openaiKey))
-			}
-			if *openaiBaseURL != "" {
-				opts = append(opts, dcdmaker.WithOpenAIBaseURL(*openaiBaseURL))
+			if baseURL != "" {
+				opts = append(opts, dcdmaker.WithOpenAIBaseURL(baseURL))
 			}
 			providers = append(providers, dcdmaker.OpenAI(opts...))
 		}

@@ -1,10 +1,7 @@
 package dcdmaker
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
-	"encoding/xml"
 	"fmt"
 	"strings"
 
@@ -44,10 +41,25 @@ func (p *openAIProvider) Generate(ctx context.Context, prompt string) (string, e
 }
 
 func (p *openAIProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	text := extractDocxText(data)
-	full := prompt + "\n\n=== SOURCE DOCUMENT ===\n" + text
+	content, err := extractDocxContent(data)
+	if err != nil {
+		return "", fmt.Errorf("openai: extract docx: %w", err)
+	}
+
+	var b strings.Builder
+	b.WriteString(prompt)
+	b.WriteString("\n\n=== SOURCE DOCUMENT XML ===\n")
+	b.WriteString(content.DocumentXML)
+	b.WriteString("\n\n")
+	if !content.HasHeader {
+		b.WriteString("NOTE: The source document has NO header. Do NOT generate [header].\n")
+	}
+	if !content.HasFooter {
+		b.WriteString("NOTE: The source document has NO footer. Do NOT generate [footer].\n")
+	}
+
 	return p.chat(ctx, []openai.ChatCompletionMessage{
-		{Role: openai.ChatMessageRoleUser, Content: full},
+		{Role: openai.ChatMessageRoleUser, Content: b.String()},
 	})
 }
 
@@ -101,45 +113,4 @@ func (p *openAIProvider) chat(ctx context.Context, messages []openai.ChatComplet
 	return result, nil
 }
 
-func extractDocxText(data []byte) string {
-	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil {
-		return ""
-	}
-	for _, f := range r.File {
-		if f.Name != "word/document.xml" {
-			continue
-		}
-		rc, err := f.Open()
-		if err != nil {
-			return ""
-		}
-		defer rc.Close()
 
-		dec := xml.NewDecoder(rc)
-		var text []string
-		inT := false
-		for {
-			tok, err := dec.Token()
-			if err != nil {
-				break
-			}
-			switch t := tok.(type) {
-			case xml.StartElement:
-				if t.Name.Local == "t" {
-					inT = true
-				}
-			case xml.CharData:
-				if inT {
-					text = append(text, string(t))
-				}
-			case xml.EndElement:
-				if t.Name.Local == "t" {
-					inT = false
-				}
-			}
-		}
-		return strings.Join(text, "")
-	}
-	return ""
-}

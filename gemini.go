@@ -1,14 +1,13 @@
 package dcdmaker
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
 
 	"google.golang.org/genai"
 )
-
-const docxMIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 type geminiProvider struct {
 	cfg    *geminiConfig
@@ -84,10 +83,24 @@ func (p *geminiProvider) Generate(ctx context.Context, prompt string) (string, e
 }
 
 func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	return p.generateContent(ctx, []*genai.Part{
-		{Text: prompt},
-		{InlineData: &genai.Blob{Data: data, MIMEType: docxMIME}},
-	})
+	content, err := extractDocxContent(data)
+	if err != nil {
+		return "", fmt.Errorf("gemini: extract docx: %w", err)
+	}
+
+	var b bytes.Buffer
+	b.WriteString(prompt)
+	b.WriteString("\n\n=== SOURCE DOCUMENT XML ===\n")
+	b.WriteString(content.DocumentXML)
+	b.WriteString("\n\n")
+	if !content.HasHeader {
+		b.WriteString("NOTE: The source document has NO header. Do NOT generate [header].\n")
+	}
+	if !content.HasFooter {
+		b.WriteString("NOTE: The source document has NO footer. Do NOT generate [footer].\n")
+	}
+
+	return p.generateContent(ctx, []*genai.Part{{Text: b.String()}})
 }
 
 func (p *geminiProvider) GenerateWithHistory(ctx context.Context, history []Message, prompt string) (string, error) {

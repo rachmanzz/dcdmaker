@@ -1,9 +1,6 @@
 package dcdmaker
 
-import (
-	"os"
-	"time"
-)
+import "time"
 
 type geminiConfig struct {
 	APIKey      string
@@ -32,7 +29,6 @@ func WithTimeout(d time.Duration) GeminiOption {
 
 func Gemini(opts ...GeminiOption) Provider {
 	cfg := &geminiConfig{
-		APIKey:      os.Getenv("GEMINI_API_KEY"),
 		Model:       "gemini-2.5-flash",
 		Temperature: 0.5,
 		Timeout:     60 * time.Second,
@@ -80,7 +76,6 @@ func WithOpenAITimeout(d time.Duration) OpenAIOption {
 
 func OpenAI(opts ...OpenAIOption) Provider {
 	cfg := &openAIConfig{
-		APIKey:      os.Getenv("OPENAI_API_KEY"),
 		Model:       "gpt-4o",
 		Temperature: 0.5,
 		MaxTokens:   8192,

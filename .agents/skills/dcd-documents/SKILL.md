@@ -1,5 +1,7 @@
 # DCD DSL Specification
 
+> This specification is the complete DCD DSL reference. Do not assume syntax features beyond what is explicitly documented here.
+
 ## 1. Style Configuration
 
 ```
@@ -55,7 +57,7 @@ formats=[date_field:dd-MM-yyyy]  # per-key: [key:format] or [source.field:format
 
 `var` first name → object prefix (`{{info.key}}`). Additional names → loop data sources (`<loop x from entries>`).
 
-Any `{{...}}` referencing data fields should be in `keys` + `var`. Sections without var/keys pass unresolvable `{{...}}` as literals. Built-in vars (`{{page}}`, `{{total}}`, `{{title}}`, `{{date}}`) auto-resolved.
+Any `{{...}}` referencing data fields MUST be in `keys` + `var`. Sections without var/keys pass unresolvable `{{...}}` as literals. Built-in vars (`{{page}}`, `{{total}}`, `{{title}}`, `{{date}}`) auto-resolved.
 
 ### Format Specifiers
 
@@ -69,7 +71,7 @@ Split document into multiple sections by **context/topic**, not by size.
 
 **Rules:**
 - Each section represents a logical part: header info, parties, transaction details, signatures, etc.
-- Section `name` should describe the context (e.g., `name=header_info`, `name=seller`, `name=object`)
+- Section `name` must describe the logical context (e.g., `name=header_info`, `name=seller`, `name=object`)
 - Keep `var` count: **1-3 maximum** per section
 - Keep `keys` count: **under 15** per section
 - Use `[section:next-page N]` to start a new section on a new page
@@ -125,45 +127,50 @@ formats=[price:#,##0]
 
 Wrapper paragraph tags (`<w:*>`) wrap entire paragraph with single property. CANNOT contain inline tags.
 
-| Tag | Description |
-|-----|-------------|
-| `<w:c>...</w:c>` | Center alignment |
-| `<w:r>...</w:r>` | Right alignment |
-| `<w:j>...</w:j>` | Justify alignment |
-| `<w:l>...</w:l>` | Left alignment (default) |
-| `<w:b>...</w:b>` | Bold (entire paragraph) |
-| `<w:i>...</w:i>` | Italic (entire paragraph) |
-| `<w:u>...</w:u>` | Underline (entire paragraph) |
-| `<w:c\|b>...</w:c\|b>` | Combined (e.g., `<w:r\|b>`, `<w:j\|i>`, `<w:c\|b\|i\|u>`) |
+| Tag | Attributes | Description |
+|-----|------------|-------------|
+| `<w:c>...</w:c>` | `size` / `font-size`, `color` | Center alignment |
+| `<w:r>...</w:r>` | `size` / `font-size`, `color` | Right alignment |
+| `<w:j>...</w:j>` | `size` / `font-size`, `color` | Justify alignment |
+| `<w:l>...</w:l>` | `size` / `font-size`, `color` | Left alignment (default) |
+| `<w:b>...</w:b>` | `size` / `font-size`, `color` | Bold (entire paragraph) |
+| `<w:i>...</w:i>` | `size` / `font-size`, `color` | Italic (entire paragraph) |
+| `<w:u>...</w:u>` | `size` / `font-size`, `color` | Underline (entire paragraph) |
+| `<w:c\|b>...</w:c\|b>` | `size` / `font-size`, `color` | Combined (e.g., `<w:r\|b>`, `<w:j\|i>`, `<w:c\|b\|i\|u>`) |
 
 **Pure text + variables only:**
 
 ```
 <w:c>Centered text {{var}}</w:c>                    <!-- VALID -->
 <w:r|b>Right bold {{var}}</w:r|b>                   <!-- VALID -->
+<w:c font-size=16>Big centered title</w:c>          <!-- VALID: size attribute -->
+<w:r|b size=14 color=#333>Right bold subtitle</w:r|b>  <!-- VALID: size + color -->
 <w:c>Text <u>underline</u></w:c>                    <!-- INVALID: no tags inside -->
 ```
 
 **Rich Paragraph Tag (Can Contain Inline Tags):**
 
-| Tag | Description |
-|-----|-------------|
-| `<p>` | Rich paragraph (default left align) |
-| `<p align=center>` | Rich paragraph centered |
-| `<p align=right>` | Rich paragraph right |
-| `<p align=justify>` | Rich paragraph justified |
-| `<br>` | Line break |
+| Tag | Attributes | Description |
+|-----|------------|-------------|
+| `<p>` | `align`, `size` / `font-size`, `color` | Rich paragraph (default left align) |
+| `<p align=center>` | `size` / `font-size`, `color` | Rich paragraph centered |
+| `<p align=right>` | `size` / `font-size`, `color` | Rich paragraph right |
+| `<p align=justify>` | `size` / `font-size`, `color` | Rich paragraph justified |
+| `<br>` | — | Line break |
 
 **Rich paragraphs can contain inline tags:**
 
 ```
 <p align=center>Centered with <u>underline</u> and <b>bold</b></p>
 <p>Normal <set:b|i>bold italic</set:b|i> text</p>
+<p align=center font-size=16 color=#2b5797>Centered with color and size</p>
 ```
 
 **Guideline:** Use `<w:*>` for pure text. Use `<p align=*>` when paragraph has mixed formatting (normal + bold + italic, etc.).
 
 > Note: In markdown tables above, `|` appears as `\|` due to markdown escaping. Actual DCD syntax uses plain `|` without backslash.
+
+> `size` and `font-size` are synonyms — either works, value in pt (points). `color` accepts hex (`#ff0000`) or named colors (`red`). Available on `<w:*>`, `<p>`, `<li>`, `<col>`.
 
 ### Inline Tags (inside `<p>`, `<li>`, `<col>`)
 

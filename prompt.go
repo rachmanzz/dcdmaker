@@ -38,6 +38,12 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("DO NOT use default values. DO NOT assume anything.\n")
 	b.WriteString("Extract ALL values directly from the SOURCE DOCUMENT XML below.\n\n")
 
+	b.WriteString("=== CRITICAL: NO DCD SYNTAX ASSUMPTIONS ===\n")
+	b.WriteString("The DCD DSL SPECIFICATION above is the COMPLETE and AUTHORITATIVE reference.\n")
+	b.WriteString("Do NOT invent, extrapolate, or assume any DCD syntax features beyond what is explicitly listed there.\n")
+	b.WriteString("Every tag, attribute, and syntax pattern you use MUST be directly from the specification.\n")
+	b.WriteString("If a DCD feature is not documented in the specification, it does not exist — do not use it.\n\n")
+
 	b.WriteString("Template structure:\n")
 	b.WriteString("1. [style] — extract exact layout, margins, font-family, font-size, line-height from source XML. Copy values directly — no guessing.\n")
 	b.WriteString("2. [title] metadata\n")
@@ -58,8 +64,9 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- Tab characters from <w:tab/> in source XML must map to <tab> or <tab size=N> inline tag.\n")
 	b.WriteString("- Table structure (<w:tbl>) must map to <table>/<row>/<col>.\n")
 	b.WriteString("- Lists (<w:numPr>) must map to <ol>/<ul>/<li>.\n")
-	b.WriteString("- Split sections by context/topic: [section 0] for header, [section 1] for parties, [section 2] for transaction, etc. Each section should have 1-3 var maximum and under 15 keys. Use [section:next-page N] to start new section on new page.\n")
-	b.WriteString("- Variable names should be inferred from document context (e.g. invoice number → invoice_no, date → date).\n")
+	b.WriteString("- Split sections by context/topic: [section 0] for header, [section 1] for parties, [section 2] for transaction, etc. Each section MUST have maximum 3 var and maximum 15 keys. Use [section:next-page N] to start new section on new page.\n")
+	b.WriteString("- PREDICTED VARIABLES: use exact names as listed above — no changes. UNPREDICTABLE [keys-unpredictable] / [object-unpredictable]: infer names from document context (strong assumptions allowed, e.g. 'Invoice No:' → invoice_no).\n")
+	b.WriteString("- `<w:*>`, `<p>`, `<li>`, `<col>` support size/font-size and color attributes (see SKILL.md for details).\n")
 	b.WriteString("- Output ONLY raw DCD syntax, no markdown fences, no extra text.\n\n")
 
 	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")

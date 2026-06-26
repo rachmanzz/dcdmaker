@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.1.10 (2026-06-26)
+
+### Added
+- **SKILL.md**: `size`/`font-size` and `color` attributes on `<w:*>`, `<p>`, `<li>`, `<col>` tags with examples
+- **SKILL.md**: Completeness notice at top — "do not assume syntax features beyond what is documented"
+- **prompt.go**: `=== CRITICAL: NO DCD SYNTAX ASSUMPTIONS ===` block — forbids inventing tags/attributes not in SKILL.md
+
+### Changed
+- **SKILL.md**: `should be` → `MUST be` (data fields in keys+var), `should describe` → `must describe` (section name)
+- **prompt.go**: `should have 1-3 var` → `MUST have maximum 3 var`
+- **prompt.go**: Variable naming rule split — predictable (exact names only) vs unpredictable (strong assumptions allowed)
+- **SKILL.md**: 417 → 422 lines
+
 ## v0.1.9 (2026-06-26)
 
 ### Added

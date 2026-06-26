@@ -63,17 +63,105 @@ Any `{{...}}` referencing data fields should be in `keys` + `var`. Sections with
 
 Array fields use dotted path in keys/formats: `keys=items.date_field`, `formats=[items.date_field:dd-MM-yyyy]`. After loop expansion, `{{x.date_field}}` → `{{items.0.date_field}}` matched by stripping the index.
 
-### Block Tags (standalone, outside `<p>`)
+### Section Splitting Guidelines
+
+Split document into multiple sections by **context/topic**, not by size.
+
+**Rules:**
+- Each section represents a logical part: header info, parties, transaction details, signatures, etc.
+- Section `name` should describe the context (e.g., `name=header_info`, `name=seller`, `name=object`)
+- Keep `var` count: **1-3 maximum** per section
+- Keep `keys` count: **under 15** per section
+- Use `[section:next-page N]` to start a new section on a new page
+
+**Example: Complex Document Split**
+
+```
+[section 0]
+name=ppat_header
+var=ppat_info
+keys=nama, kedudukan, sk_nomor, sk_tanggal, alamat, telepon, email
+
+--- BODY ---
+<h1>LAND DEED OFFICER</h1>
+<p align=center><b>{{ppat_info.nama}}</b></p>
+
+[section:next-page 1]
+name=seller_info
+var=seller, seller_spouse
+keys=seller.name, seller.id, seller.address, seller.birthdate, seller_spouse.name, seller_spouse.id
+formats=[seller.birthdate:dd-MM-yyyy], [seller_spouse.birthdate:dd-MM-yyyy]
+
+--- BODY ---
+<p>Seller: <b>{{seller.name}}</b>, ID {{seller.id}}</p>
+<p>With spouse consent: {{seller_spouse.name}}</p>
+
+[section 2]
+name=buyer_info
+var=buyer
+keys=name, id, address, birthdate
+formats=[birthdate:dd-MM-yyyy]
+
+--- BODY ---
+<p>Buyer: <b>{{buyer.name}}</b>, ID {{buyer.id}}</p>
+
+[section:next-page 3]
+name=transaction_object
+var=object
+keys=type, area, certificate_no, price, address
+formats=[price:#,##0]
+
+--- BODY ---
+<p>Object: {{object.type}}, area {{object.area}} m²</p>
+<p>Price: Rp {{object.price}}</p>
+```
+
+**Benefits:**
+- Easier to read and maintain
+- Clear separation of concerns
+- Predictable variable scope
+
+### Block Tags (Wrapper Paragraphs — Pure Text Only)
+
+Wrapper paragraph tags (`<w:*>`) wrap entire paragraph with single property. CANNOT contain inline tags.
 
 | Tag | Description |
 |-----|-------------|
-| `<w:c>...</w:c>` | Center |
-| `<w:b>...</w:b>` | Bold |
-| `<w:i>...</w:i>` | Italic |
-| `<w:u>...</w:u>` | Underline |
-| `<w:c\|b>...</w:c\|b>` | Combined with pipe (e.g. `<w:b\|i\|u>`) |
-| `<p>` | Paragraph |
+| `<w:c>...</w:c>` | Center alignment |
+| `<w:r>...</w:r>` | Right alignment |
+| `<w:j>...</w:j>` | Justify alignment |
+| `<w:l>...</w:l>` | Left alignment (default) |
+| `<w:b>...</w:b>` | Bold (entire paragraph) |
+| `<w:i>...</w:i>` | Italic (entire paragraph) |
+| `<w:u>...</w:u>` | Underline (entire paragraph) |
+| `<w:c\|b>...</w:c\|b>` | Combined (e.g., `<w:r\|b>`, `<w:j\|i>`, `<w:c\|b\|i\|u>`) |
+
+**Pure text + variables only:**
+
+```
+<w:c>Centered text {{var}}</w:c>                    <!-- VALID -->
+<w:r|b>Right bold {{var}}</w:r|b>                   <!-- VALID -->
+<w:c>Text <u>underline</u></w:c>                    <!-- INVALID: no tags inside -->
+```
+
+**Rich Paragraph Tag (Can Contain Inline Tags):**
+
+| Tag | Description |
+|-----|-------------|
+| `<p>` | Rich paragraph (default left align) |
+| `<p align=center>` | Rich paragraph centered |
+| `<p align=right>` | Rich paragraph right |
+| `<p align=justify>` | Rich paragraph justified |
 | `<br>` | Line break |
+
+**Rich paragraphs can contain inline tags:**
+
+```
+<p align=center>Centered with <u>underline</u> and <b>bold</b></p>
+<p>Normal <set:b|i>bold italic</set:b|i> text</p>
+```
+
+**Guideline:** Use `<w:*>` for pure text. Use `<p align=*>` when paragraph has mixed formatting (normal + bold + italic, etc.).
 
 > Note: In markdown tables above, `|` appears as `\|` due to markdown escaping. Actual DCD syntax uses plain `|` without backslash.
 
@@ -89,6 +177,43 @@ Array fields use dotted path in keys/formats: `keys=items.date_field`, `formats=
 | `<tab>` / `<tab size=N>` | Tab character, optional N-space width |
 
 > Note: Actual DCD syntax uses plain `|` without backslash (e.g., `<set:b|i>`).
+
+### Tag Nesting Rules
+
+**Allowed:**
+- `<p>` and `<p align=*>` can contain: `<b>`, `<i>`, `<u>`, `<code>`, `<set:>`, `<tab>`, `<a>`, `{{...}}`
+- `<li>` can contain: same as `<p>`
+- `<col>` can contain: same as `<p>`
+- `<loop>` variants can contain: any body tags
+
+**Forbidden:**
+- `<w:*>` wrapper tags (e.g., `<w:c>`, `<w:r>`, `<w:b>`) CANNOT contain any tags — pure text + variables only
+- `<pb>`, `<page-break>`, `<hr>` MUST be standalone — NOT inside `<p>`, `<li>`, `<col>`, or `<w:*>`
+
+**Examples:**
+
+Valid:
+```
+<w:c>Center text {{var}}</w:c>
+<p align=center>Center with <b>bold</b> and <u>underline</u></p>
+<pb>
+<p>New page text</p>
+```
+
+Invalid:
+```
+<w:c>Text <u>underlined</u></w:c>         <!-- WRONG: tag inside wrapper -->
+<p><pb/>Text after break</p>              <!-- WRONG: pb inside p -->
+<p align=center><w:c>Nested</w:c></p>     <!-- WRONG: wrapper inside p -->
+```
+
+**Page Break Mid-Paragraph:**
+If source has page break in middle of paragraph text, split into two paragraphs:
+```
+<p>Text before break</p>
+<pb>
+<p>Text after break</p>
+```
 
 ---
 

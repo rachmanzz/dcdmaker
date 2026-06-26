@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.1.9 (2026-06-26)
+
+### Added
+- **SKILL.md**: Section Splitting Guidelines — rules for splitting by context/topic, max 1-3 var and 15 keys per section, with multi-section example
+- **SKILL.md**: `<w:r>`, `<w:j>`, `<w:l>` alignment tags — right, justify, left wrapper paragraphs
+- **SKILL.md**: `<p align=center/right/justify>` rich paragraph tags for mixed formatting
+- **SKILL.md**: Tag Nesting Rules section — comprehensive allowed/forbidden nesting rules with examples
+- **SKILL.md**: Wrapper vs Rich paragraph distinction — `<w:*>` for pure text, `<p align=*>` for mixed formatting
+- **prompt.go**: Wrapper paragraph rules — pure text only, no inline tags allowed
+- **prompt.go**: Rich paragraph rules — can contain inline tags for mixed formatting
+- **prompt.go**: Standalone tag restrictions — `<pb>`, `<hr>` must not be nested, split paragraphs if mid-text
+- **prompt.go**: Section splitting rules — by context, 1-3 var max, under 15 keys
+
+### Fixed
+- Invalid nesting: AI no longer generates inline tags inside wrapper tags (e.g., `<w:c>Text <u>underline</u></w:c>`)
+- Page break placement: AI now correctly places `<pb>` standalone, not inside paragraphs
+- Gendut sections: AI now splits sections by context instead of cramming 8+ vars and 60+ keys into single section
+
+### Changed
+- **SKILL.md**: 292 → 417 lines (+125 lines for nesting rules and section splitting)
+
+## v0.1.8 (2026-06-26)
+
+### Changed
+- **SKILL.md**: Optimized from 934 → 292 lines (69% reduction, 66% token savings)
+- **SKILL.md**: Fixed 18 audit issues — removed ambiguous syntax, unverified claims, added missing examples
+- **README.md**: Replaced Indonesian examples with English
+
+### Removed
+- Unverified `:` separator claim (only `=` is supported)
+- Redundant examples and verbose subsections (46 → 5 subsections)
+
 ## v0.1.7 (2026-06-26)
 
 ### Added

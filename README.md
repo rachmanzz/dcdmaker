@@ -91,6 +91,36 @@ maker.
 
 Additional fields found in the document are written to `[object-unpredictable]` and `[keys-unpredictable]` sections.
 
+### Retrieving Unpredictable Fields
+
+```go
+maker.Run("output.dcd")
+
+for _, obj := range maker.UnpredictableObjects() {
+    fmt.Printf("Object: %s (array=%v) fields=%v\n", obj.Name, obj.IsArray, obj.Fields)
+}
+
+keys := maker.UnpredictableKeys()
+fmt.Println("Additional keys:", keys)
+
+// Raw DCD output
+_ = maker.LastResult()
+
+// Which provider/model succeeded (e.g. "gemini:gemini-2.5-flash")
+_ = maker.LastProvider()
+```
+
+### AddPredictableKeys
+
+Append variable keys without clearing previously set ones:
+
+```go
+maker.
+    AddPredictableKeys(
+        dcdmaker.Object("extra", "notes", "approved_by"),
+    )
+```
+
 ### Fallback by model
 
 ```go
@@ -124,6 +154,8 @@ maker := dcdmaker.NewMaker(
 | `WithOpenAIAPIKey` | `$OPENAI_API_KEY` | API key |
 | `WithOpenAITimeout` | `60s` | Request timeout |
 
+> For large documents (28+ pages), use 180s+ timeout: `WithTimeout(180*time.Second)` or `WithOpenAITimeout(180*time.Second)`
+
 ## How It Works
 
 ```
@@ -131,7 +163,7 @@ DOCX ──> dcdmaker ──> AI (Gemini / OpenAI) ──> .dcd template
 ```
 
 1. **Read** — Source document loaded from disk
-2. **Send** — Raw DOCX sent as inline data (Gemini) or text-extracted (OpenAI)
+2. **Send** — Raw `word/document.xml` from DOCX sent to AI (both providers)
 3. **Generate** — AI produces DCD template based on document structure
 4. **Validate** — Output checked for balanced tags, valid DCD syntax
 5. **Retry** — 3 attempts per provider, fallback to next provider
@@ -179,7 +211,7 @@ keys=title, items.name, items.qty, items.price
 - info=discount, shipping_address
 
 [keys-unpredictable]
-- data=po_number, department
+- po_number, department
 ```
 
 ## Development

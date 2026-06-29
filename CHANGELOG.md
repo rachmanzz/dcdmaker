@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.11 (2026-06-29)
+
+### Added
+- **unpredictable.go**: `UnpredictableObject` struct, `UnpredictableObjects()` and `UnpredictableKeys()` methods on `*Maker` to parse `[object-unpredictable]` and `[keys-unpredictable]` sections from AI-generated DCD output
+- **maker.go**: `LastResult() string` to retrieve raw DCD output, `UnpredictableObjects()`, `UnpredictableKeys()` methods
+
+### Fixed
+- **prompt.go**: `[keys-unpredictable]` format corrected — no `varName=` prefix (flat key mappings)
+
 ## v0.1.10 (2026-06-26)
 
 ### Added

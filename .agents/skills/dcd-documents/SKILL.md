@@ -57,6 +57,8 @@ formats=[date_field:dd-MM-yyyy]  # per-key: [key:format] or [source.field:format
 
 `var` first name → object prefix (`{{info.key}}`). Additional names → loop data sources (`<loop x from entries>`).
 
+`name`, `var`, `keys`, `formats` accept both `=` and `:` separators (e.g. `name=header` or `name:header`).
+
 Any `{{...}}` referencing data fields MUST be in `keys` + `var`. Sections without var/keys pass unresolvable `{{...}}` as literals. Built-in vars (`{{page}}`, `{{total}}`, `{{title}}`, `{{date}}`) auto-resolved.
 
 ### Format Specifiers

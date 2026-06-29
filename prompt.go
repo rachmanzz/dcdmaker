@@ -75,7 +75,7 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- varName=[]field1, field2     ← array of objects\n")
 	b.WriteString("- varName=field1, field2       ← single object\n\n")
 	b.WriteString("[keys-unpredictable]\n")
-	b.WriteString("- varName=field1, field2       ← simple key mappings\n\n")
+	b.WriteString("- field1, field2, field3       ← simple key mappings\n\n")
 	b.WriteString("These are for additional fields found in the document ")
 	b.WriteString("that are not listed in PREDICTED VARIABLES above.\n\n")
 

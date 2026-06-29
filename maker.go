@@ -36,6 +36,7 @@ type Maker struct {
 	resume          bool
 	predictableKeys []KeyDef
 	lastProvider    string
+	lastResult      string
 }
 
 func NewMaker(providers ...Provider) *Maker {
@@ -66,6 +67,18 @@ func (m *Maker) PredictableKeys(keys ...KeyDef) *Maker {
 
 func (m *Maker) LastProvider() string {
 	return m.lastProvider
+}
+
+func (m *Maker) LastResult() string {
+	return m.lastResult
+}
+
+func (m *Maker) UnpredictableObjects() []UnpredictableObject {
+	return parseUnpredictableObjects(m.lastResult)
+}
+
+func (m *Maker) UnpredictableKeys() []string {
+	return parseUnpredictableKeys(m.lastResult)
 }
 
 func (m *Maker) AddPredictableKeys(keys ...KeyDef) *Maker {
@@ -158,6 +171,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 
 			if isDCDValid(result) {
 				m.lastProvider = provider.Name()
+				m.lastResult = result
 				return result, nil
 			}
 

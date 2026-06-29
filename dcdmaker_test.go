@@ -494,6 +494,88 @@ func TestBuildPromptWithPredictableKeys(t *testing.T) {
 	}
 }
 
+func TestUnpredictableParsing(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+
+[object-unpredictable]
+- penjual=[]nama, identitas, alamat
+- notaris=nama, sk, alamat
+
+[keys-unpredictable]
+- nama_ppat, kedudukan_ppat, sk_nomor
+`
+	objs := parseUnpredictableObjects(dcd)
+	if len(objs) != 2 {
+		t.Fatalf("expected 2 objects, got %d", len(objs))
+	}
+	if objs[0].Name != "penjual" || !objs[0].IsArray || len(objs[0].Fields) != 3 {
+		t.Fatalf("bad first object: %+v", objs[0])
+	}
+	if objs[1].Name != "notaris" || objs[1].IsArray || len(objs[1].Fields) != 3 {
+		t.Fatalf("bad second object: %+v", objs[1])
+	}
+
+	keys := parseUnpredictableKeys(dcd)
+	if len(keys) != 3 {
+		t.Fatalf("expected 3 keys, got %d: %v", len(keys), keys)
+	}
+	if keys[0] != "nama_ppat" || keys[1] != "kedudukan_ppat" || keys[2] != "sk_nomor" {
+		t.Fatalf("bad keys: %v", keys)
+	}
+}
+
+func TestUnpredictableEmpty(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+`
+	objs := parseUnpredictableObjects(dcd)
+	if len(objs) != 0 {
+		t.Fatalf("expected 0 objects, got %d", len(objs))
+	}
+	keys := parseUnpredictableKeys(dcd)
+	if len(keys) != 0 {
+		t.Fatalf("expected 0 keys, got %d", len(keys))
+	}
+}
+
+func TestMakerUnpredictableMethods(t *testing.T) {
+	m := &Maker{
+		lastResult: `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+
+[object-unpredictable]
+- user=[]name, email
+
+[keys-unpredictable]
+- title, author
+`,
+	}
+	objs := m.UnpredictableObjects()
+	if len(objs) != 1 || objs[0].Name != "user" || !objs[0].IsArray {
+		t.Fatalf("bad objects: %+v", objs)
+	}
+	keys := m.UnpredictableKeys()
+	if len(keys) != 2 || keys[0] != "title" || keys[1] != "author" {
+		t.Fatalf("bad keys: %v", keys)
+	}
+}
+
 func TestBuildPromptWithoutPredictableKeys(t *testing.T) {
 	prompt := buildPrompt("hello", nil)
 

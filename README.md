@@ -113,11 +113,20 @@ maker.PredictableKeys(
 )
 ```
 
-| Builder | `Field()` | Prompt output |
-|---------|-----------|---------------|
-| `Field("name", "string")` | No format | `name: string` |
-| `Field("date", "date-str", "DD-MM-YYYY")` | With format | `date: date-str (DD-MM-YYYY)` |
-| `Field("qty", "number")` | No format | `qty: number` |
+| Field usage | Prompt output |
+|-------------|---------------|
+| `Field("name", "string")` | `name: string` |
+| `Field("qty", "number")` | `qty: number` |
+| `Field("active", "boolean")` | `active: boolean` |
+| `Field("date", "date-str", "DD-MM-YYYY")` | `date: date-str (DD-MM-YYYY)` |
+
+Applies to `ObjectEx`, `ArrayEx`, `KeysEx`:
+
+```go
+ObjectEx("info",  Field("name", "string"))         // info {name: string}
+ArrayEx("items",  Field("qty", "number"))           // items []qty: number
+KeysEx(           Field("date", "date-str", "DD-MM-YYYY")) // date: date-str ... (keys)
+```
 
 Additional fields found in the document are written to `[object-unpredictable]` and `[keys-unpredictable]` sections.
 

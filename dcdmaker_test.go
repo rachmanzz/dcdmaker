@@ -390,6 +390,25 @@ func TestKeyDefKeys(t *testing.T) {
 	}
 }
 
+func TestKeysEx(t *testing.T) {
+	k := KeysEx(
+		Field("po_number", "string"),
+		Field("date", "date-str", "DD-MM-YYYY"),
+	)
+	if k.Type != VarKeys {
+		t.Errorf("KeysEx type = %v, want VarKeys", k.Type)
+	}
+	if len(k.FieldDefs) != 2 {
+		t.Fatalf("KeysEx FieldDefs len = %d", len(k.FieldDefs))
+	}
+	if k.FieldDefs[0].Name != "po_number" || k.FieldDefs[0].Type != "string" {
+		t.Errorf("bad first field: %+v", k.FieldDefs[0])
+	}
+	if k.FieldDefs[1].Format != "DD-MM-YYYY" {
+		t.Errorf("bad format: %+v", k.FieldDefs[1])
+	}
+}
+
 func TestFieldDef(t *testing.T) {
 	f1 := Field("nama", "string")
 	if f1.Name != "nama" || f1.Type != "string" || f1.Format != "" {
@@ -454,6 +473,10 @@ func TestBuildPromptWithFieldDefs(t *testing.T) {
 			Field("unit_price", "number"),
 		),
 		Keys("po_number", "department"),
+		KeysEx(
+			Field("date", "date-str", "DD-MM-YYYY"),
+			Field("total", "number"),
+		),
 	})
 
 	if !strings.Contains(prompt, "info {invoice_no: string, date: date-str (DD-MM-YYYY)}") {
@@ -464,6 +487,9 @@ func TestBuildPromptWithFieldDefs(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "po_number, department (keys)") {
 		t.Errorf("prompt missing Keys:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "date: date-str (DD-MM-YYYY), total: number (keys)") {
+		t.Errorf("prompt missing KeysEx with types:\n%s", prompt)
 	}
 }
 

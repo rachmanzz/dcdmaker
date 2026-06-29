@@ -41,6 +41,10 @@ func Keys(fields ...string) KeyDef {
 	return KeyDef{Type: VarKeys, Fields: fields}
 }
 
+func KeysEx(fields ...FieldDef) KeyDef {
+	return KeyDef{Type: VarKeys, FieldDefs: fields}
+}
+
 func Field(name string, typ string, format ...string) FieldDef {
 	f := FieldDef{Name: name, Type: typ}
 	if len(format) > 0 {

@@ -37,7 +37,11 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 					b.WriteString(fmt.Sprintf("  %s {%s}\n", k.Name, strings.Join(k.Fields, ", ")))
 				}
 			case VarKeys:
-				b.WriteString(fmt.Sprintf("  %s (keys)\n", strings.Join(k.Fields, ", ")))
+				if k.FieldDefs != nil {
+					b.WriteString(fmt.Sprintf("  %s (keys)\n", renderFieldDefs(k.FieldDefs)))
+				} else {
+					b.WriteString(fmt.Sprintf("  %s (keys)\n", strings.Join(k.Fields, ", ")))
+				}
 			}
 		}
 		b.WriteString("\n")

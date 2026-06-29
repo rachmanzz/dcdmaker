@@ -89,6 +89,7 @@ maker.
 - `Object(name, fields...)` — singleton object, accessed as `{{name.field}}`
 - `Array(name, fields...)` — array of objects for `<loop>`, accessed as `{{x.field}}`
 - `Keys(fields...)` — flat keys, no object prefix, accessed as `{{field}}` directly
+- `KeysEx(fields...)` — flat keys with typed fields via `Field()`
 - `ObjectEx(name, fields...)` — object with typed fields via `Field()` (type, optional format)
 - `ArrayEx(name, fields...)` — array with typed fields via `Field()`
 
@@ -105,7 +106,10 @@ maker.PredictableKeys(
         dcdmaker.Field("name", "string"),
         dcdmaker.Field("qty", "number"),
     ),
-    dcdmaker.Keys("po_number", "department"),
+    dcdmaker.KeysEx(
+        dcdmaker.Field("date", "date-str", "DD-MM-YYYY"),
+        dcdmaker.Field("total", "number"),
+    ),
 )
 ```
 

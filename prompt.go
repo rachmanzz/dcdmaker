@@ -25,9 +25,19 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 		for _, k := range predictableKeys {
 			switch k.Type {
 			case VarArray:
-				fmt.Fprintf(&b, "  %s []%s (array — for <loop>)\n", k.Name, strings.Join(k.Fields, ", "))
+				if k.FieldDefs != nil {
+					b.WriteString(fmt.Sprintf("  %s []%s (array — for <loop>)\n", k.Name, renderFieldDefs(k.FieldDefs)))
+				} else {
+					b.WriteString(fmt.Sprintf("  %s []%s (array — for <loop>)\n", k.Name, strings.Join(k.Fields, ", ")))
+				}
 			case VarObject:
-				fmt.Fprintf(&b, "  %s {%s}\n", k.Name, strings.Join(k.Fields, ", "))
+				if k.FieldDefs != nil {
+					b.WriteString(fmt.Sprintf("  %s {%s}\n", k.Name, renderFieldDefs(k.FieldDefs)))
+				} else {
+					b.WriteString(fmt.Sprintf("  %s {%s}\n", k.Name, strings.Join(k.Fields, ", ")))
+				}
+			case VarKeys:
+				b.WriteString(fmt.Sprintf("  %s (keys)\n", strings.Join(k.Fields, ", ")))
 			}
 		}
 		b.WriteString("\n")
@@ -88,4 +98,16 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("Generate the DCD template now:")
 
 	return b.String()
+}
+
+func renderFieldDefs(fields []FieldDef) string {
+	parts := make([]string, len(fields))
+	for i, f := range fields {
+		if f.Format != "" {
+			parts[i] = fmt.Sprintf("%s: %s (%s)", f.Name, f.Type, f.Format)
+		} else {
+			parts[i] = fmt.Sprintf("%s: %s", f.Name, f.Type)
+		}
+	}
+	return strings.Join(parts, ", ")
 }

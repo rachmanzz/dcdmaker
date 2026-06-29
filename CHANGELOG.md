@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.12 (2026-06-29)
+
+### Added
+- **maker.go**: `VarKeys`, `FieldDef`, `Field()`, `Keys()`, `ObjectEx()`, `ArrayEx()` — typed variable definitions with type/format support
+- **prompt.go**: Render type and format in PREDICTED VARIABLES section when `FieldDefs` are set; new `VarKeys` rendering (flat keys)
+
+### Changed
+- **README.md**: Updated PredictableKeys section with `Keys()`, `ObjectEx()`, `ArrayEx()`, `Field()` docs
+
 ## v0.1.11 (2026-06-29)
 
 ### Added

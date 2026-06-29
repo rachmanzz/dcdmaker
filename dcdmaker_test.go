@@ -380,6 +380,93 @@ func TestKeyDefArray(t *testing.T) {
 	}
 }
 
+func TestKeyDefKeys(t *testing.T) {
+	k := Keys("po_number", "department")
+	if k.Type != VarKeys {
+		t.Errorf("Keys type = %v, want VarKeys", k.Type)
+	}
+	if len(k.Fields) != 2 || k.Fields[0] != "po_number" {
+		t.Errorf("Keys fields = %v", k.Fields)
+	}
+}
+
+func TestFieldDef(t *testing.T) {
+	f1 := Field("nama", "string")
+	if f1.Name != "nama" || f1.Type != "string" || f1.Format != "" {
+		t.Errorf("Field() without format = %+v", f1)
+	}
+
+	f2 := Field("tanggal_lahir", "date-str", "DD-MM-YYYY")
+	if f2.Name != "tanggal_lahir" || f2.Type != "date-str" || f2.Format != "DD-MM-YYYY" {
+		t.Errorf("Field() with format = %+v", f2)
+	}
+
+	f3 := Field("jumlah", "number")
+	if f3.Name != "jumlah" || f3.Type != "number" || f3.Format != "" {
+		t.Errorf("Field() number = %+v", f3)
+	}
+}
+
+func TestKeyDefObjectEx(t *testing.T) {
+	k := ObjectEx("penjual",
+		Field("nama", "string"),
+		Field("tanggal_lahir", "date-str", "DD-MM-YYYY"),
+	)
+	if k.Name != "penjual" || k.Type != VarObject {
+		t.Errorf("ObjectEx name/type = %+v", k)
+	}
+	if len(k.FieldDefs) != 2 {
+		t.Fatalf("ObjectEx FieldDefs len = %d", len(k.FieldDefs))
+	}
+	if k.FieldDefs[0].Name != "nama" || k.FieldDefs[0].Type != "string" {
+		t.Errorf("bad first field: %+v", k.FieldDefs[0])
+	}
+	if k.FieldDefs[1].Format != "DD-MM-YYYY" {
+		t.Errorf("bad format: %+v", k.FieldDefs[1])
+	}
+}
+
+func TestKeyDefArrayEx(t *testing.T) {
+	k := ArrayEx("items",
+		Field("name", "string"),
+		Field("qty", "number"),
+	)
+	if k.Name != "items" || k.Type != VarArray {
+		t.Errorf("ArrayEx name/type = %+v", k)
+	}
+	if len(k.FieldDefs) != 2 {
+		t.Fatalf("ArrayEx FieldDefs len = %d", len(k.FieldDefs))
+	}
+	if k.FieldDefs[1].Name != "qty" || k.FieldDefs[1].Type != "number" {
+		t.Errorf("bad field: %+v", k.FieldDefs[1])
+	}
+}
+
+func TestBuildPromptWithFieldDefs(t *testing.T) {
+	prompt := buildPrompt("", []KeyDef{
+		ObjectEx("info",
+			Field("invoice_no", "string"),
+			Field("date", "date-str", "DD-MM-YYYY"),
+		),
+		ArrayEx("items",
+			Field("name", "string"),
+			Field("qty", "number"),
+			Field("unit_price", "number"),
+		),
+		Keys("po_number", "department"),
+	})
+
+	if !strings.Contains(prompt, "info {invoice_no: string, date: date-str (DD-MM-YYYY)}") {
+		t.Errorf("prompt missing ObjectEx with types:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "items []name: string, qty: number, unit_price: number") {
+		t.Errorf("prompt missing ArrayEx with types:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "po_number, department (keys)") {
+		t.Errorf("prompt missing Keys:\n%s", prompt)
+	}
+}
+
 func TestIsDCDValidWithUnpredictable(t *testing.T) {
 	dcd := `[section 0]
 name=header

@@ -13,12 +13,20 @@ type VarType int
 const (
 	VarObject VarType = iota
 	VarArray
+	VarKeys
 )
 
-type KeyDef struct {
+type FieldDef struct {
 	Name   string
-	Type   VarType
-	Fields []string
+	Type   string // "string", "number", "boolean", "date-str"
+	Format string // optional, used with date-str
+}
+
+type KeyDef struct {
+	Name      string
+	Type      VarType
+	Fields    []string   // backwards compat, used when FieldDefs is nil
+	FieldDefs []FieldDef // takes priority over Fields when set
 }
 
 func Object(name string, fields ...string) KeyDef {
@@ -27,6 +35,26 @@ func Object(name string, fields ...string) KeyDef {
 
 func Array(name string, fields ...string) KeyDef {
 	return KeyDef{Name: name, Type: VarArray, Fields: fields}
+}
+
+func Keys(fields ...string) KeyDef {
+	return KeyDef{Type: VarKeys, Fields: fields}
+}
+
+func Field(name string, typ string, format ...string) FieldDef {
+	f := FieldDef{Name: name, Type: typ}
+	if len(format) > 0 {
+		f.Format = format[0]
+	}
+	return f
+}
+
+func ObjectEx(name string, fields ...FieldDef) KeyDef {
+	return KeyDef{Name: name, Type: VarObject, FieldDefs: fields}
+}
+
+func ArrayEx(name string, fields ...FieldDef) KeyDef {
+	return KeyDef{Name: name, Type: VarArray, FieldDefs: fields}
 }
 
 type Maker struct {

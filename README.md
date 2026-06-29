@@ -88,6 +88,32 @@ maker.
 
 - `Object(name, fields...)` — singleton object, accessed as `{{name.field}}`
 - `Array(name, fields...)` — array of objects for `<loop>`, accessed as `{{x.field}}`
+- `Keys(fields...)` — flat keys, no object prefix, accessed as `{{field}}` directly
+- `ObjectEx(name, fields...)` — object with typed fields via `Field()` (type, optional format)
+- `ArrayEx(name, fields...)` — array with typed fields via `Field()`
+
+Typed fields with `Field()`:
+
+```go
+maker.PredictableKeys(
+    dcdmaker.ObjectEx("info",
+        dcdmaker.Field("invoice_no", "string"),
+        dcdmaker.Field("date", "date-str", "DD-MM-YYYY"),
+        dcdmaker.Field("total", "number"),
+    ),
+    dcdmaker.ArrayEx("items",
+        dcdmaker.Field("name", "string"),
+        dcdmaker.Field("qty", "number"),
+    ),
+    dcdmaker.Keys("po_number", "department"),
+)
+```
+
+| Builder | `Field()` | Prompt output |
+|---------|-----------|---------------|
+| `Field("name", "string")` | No format | `name: string` |
+| `Field("date", "date-str", "DD-MM-YYYY")` | With format | `date: date-str (DD-MM-YYYY)` |
+| `Field("qty", "number")` | No format | `qty: number` |
 
 Additional fields found in the document are written to `[object-unpredictable]` and `[keys-unpredictable]` sections.
 

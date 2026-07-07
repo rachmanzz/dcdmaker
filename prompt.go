@@ -81,7 +81,7 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- Tab characters from <w:tab/> in source XML must map to <tab> or <tab size=N> inline tag.\n")
 	b.WriteString("- Table structure (<w:tbl>) must map to <table>/<row>/<col>.\n")
 	b.WriteString("- Lists (<w:numPr>) must map to <ol>/<ul>/<li>.\n")
-	b.WriteString("- Split sections by context/topic: [section 0] for header, [section 1] for parties, [section 2] for transaction, etc. Each section MUST have maximum 3 var and maximum 15 keys. Use [section:next-page N] to start new section on new page.\n")
+	b.WriteString("- Split sections by context/topic: [section 0] for header, [section 1] for parties, [section 2] for transaction, etc. Aim for ≤3 var and ≤15 keys per section (split if more needed). Use [section:next-page N] to start new section on new page.\n")
 	b.WriteString("- PREDICTED VARIABLES: use exact names as listed above — no changes. UNPREDICTABLE [keys-unpredictable] / [object-unpredictable]: infer names from document context (strong assumptions allowed, e.g. 'Invoice No:' → invoice_no).\n")
 	b.WriteString("- `<w:*>`, `<p>`, `<li>`, `<col>` support size/font-size and color attributes (see SKILL.md for details).\n")
 	b.WriteString("- Output ONLY raw DCD syntax, no markdown fences, no extra text.\n")
@@ -90,13 +90,13 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- CRITICAL: Every `<loop x from source>` in body MUST have `source` listed in `var=` of the same [section]. The fields accessed as `{{x.field}}` inside the loop MUST be listed in `keys=`.\n\n")
 
 	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")
-	b.WriteString("After the main template sections, include:\n\n")
+	b.WriteString("If the document contains objects/keys whose count or structure varies dynamically, you MUST include these after the main sections:\n\n")
 	b.WriteString("[object-unpredictable]\n")
-	b.WriteString("- varName=[]field1, field2     ← array of objects\n")
-	b.WriteString("- varName=field1, field2       ← single object\n\n")
+	b.WriteString("var=objectVarName\n")
+	b.WriteString("keys=field1, field2, field3\n\n")
 	b.WriteString("[keys-unpredictable]\n")
-	b.WriteString("- field1, field2, field3       ← simple key mappings\n\n")
-	b.WriteString("These are for additional fields found in the document ")
+	b.WriteString("var=objectVarName\n\n")
+	b.WriteString("These capture additional fields found in the document ")
 	b.WriteString("that are not listed in PREDICTED VARIABLES above.\n\n")
 
 	if strings.TrimSpace(userPrompt) != "" {

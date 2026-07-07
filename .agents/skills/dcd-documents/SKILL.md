@@ -74,8 +74,8 @@ Split document into multiple sections by **context/topic**, not by size.
 **Rules:**
 - Each section represents a logical part: header info, parties, transaction details, signatures, etc.
 - Section `name` must describe the logical context (e.g., `name=header_info`, `name=seller`, `name=object`)
-- Keep `var` count: **1-3 maximum** per section
-- Keep `keys` count: **under 15** per section
+- Keep `var` count: **aim for ≤3** per section (split if more needed)
+- Keep `keys` count: **aim for ≤15** per section (split if more needed)
 - Use `[section:next-page N]` to start a new section on a new page
 
 **Example: Complex Document Split**
@@ -415,6 +415,27 @@ first-page=false
 | `margin` | Distance to content |
 | `first-page` | `true`/`false` — show on page 1 |
 | `mirror` | `true`/`false` — swap left↔right (for odd/even pages in duplex) |
+
+### Unpredictable Objects & Keys
+
+Objects/keys whose count/structure cannot be known from the source document alone (e.g. dynamic form fields, repeated signatures, variable-numbered annexes).
+
+**Syntax:**
+
+```
+[object-unpredictable]
+var=signatures
+keys=signer_name, position, date
+
+[keys-unpredictable]
+var=signatures
+```
+
+**Rules:**
+- `[object-unpredictable]` declares that `var` contains objects whose keys repeat unpredictably
+- `[keys-unpredictable]` declares that `var` has keys whose presence is unpredictable
+- Both are required in DCD output when the source document contains such variability
+- Always declare alongside a matching `var=` and `keys=` in the parent section
 
 ### Variables
 

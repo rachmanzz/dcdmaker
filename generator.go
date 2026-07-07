@@ -77,14 +77,22 @@ func isIncomplete(dcd string) bool {
 		return true
 	}
 
+	sectionCount := strings.Count(dcd, "[section")
+	bodyCount := strings.Count(dcd, "--- BODY ---")
+
 	hasUnpredictable := strings.Contains(dcd, "[object-unpredictable]") ||
 		strings.Contains(dcd, "[keys-unpredictable]")
-	if !hasUnpredictable && strings.Count(dcd, "[section") >= 1 {
-		bodyCount := strings.Count(dcd, "--- BODY ---")
-		sectionCount := strings.Count(dcd, "[section")
-		if bodyCount >= sectionCount {
-			return false
+
+	if hasUnpredictable {
+		objs := parseUnpredictableObjects(dcd)
+		keys := parseUnpredictableKeys(dcd)
+		if len(objs) == 0 && len(keys) == 0 {
+			return true
 		}
+		return false
+	}
+
+	if sectionCount >= 1 && bodyCount < sectionCount {
 		return true
 	}
 

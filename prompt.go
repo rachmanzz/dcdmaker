@@ -87,17 +87,18 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- Output ONLY raw DCD syntax, no markdown fences, no extra text.\n")
 	b.WriteString("- CRITICAL: Every variable listed in `var=` AND every key listed in `keys=` MUST be used in the --- BODY --- at least once. Do NOT declare unused variables or keys.\n")
 	b.WriteString("- CRITICAL: Every `{{var.field}}` in body MUST have `var` listed in `var=` and `field` listed in `keys=` of the same [section].\n")
-	b.WriteString("- CRITICAL: Every `<loop x from source>` in body MUST have `source` listed in `var=` of the same [section]. The fields accessed as `{{x.field}}` inside the loop MUST be listed in `keys=`.\n\n")
+	b.WriteString("- CRITICAL: Every `<loop x from source>` in body MUST have `source` listed in `var=` of the same [section]. The fields accessed as `{{x.field}}` inside the loop MUST be listed in `keys=`.\n")
+	b.WriteString("- CRITICAL: If source contains recurring itemized details ending with total/summary, use `<loop>` for recurring items. The total/summary line MUST be a separate `{{var.field}}` — do NOT omit it.\n")
+	b.WriteString("- CRITICAL: Do NOT skip transitional clauses, introductory phrases, exception clauses, or connecting text between sections. Pay EXTRA attention to the FINAL paragraphs — AI models commonly truncate near the end. Every sentence must map to DCD.\n")
+	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context (e.g. dots near \"Nama\" → {{name}}). Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n\n")
 
 	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")
-	b.WriteString("If the document contains objects/keys whose count or structure varies dynamically, you MUST include these after the main sections:\n\n")
+	b.WriteString("You MUST include these sections. EVERY new variable/field introduced for itemized loops, dynamic placeholders, or unexpected content MUST be declared here. Do NOT leave these sections empty.\n\n")
 	b.WriteString("[object-unpredictable]\n")
 	b.WriteString("var=objectVarName\n")
 	b.WriteString("keys=field1, field2, field3\n\n")
 	b.WriteString("[keys-unpredictable]\n")
 	b.WriteString("var=objectVarName\n\n")
-	b.WriteString("These capture additional fields found in the document ")
-	b.WriteString("that are not listed in PREDICTED VARIABLES above.\n\n")
 
 	if strings.TrimSpace(userPrompt) != "" {
 		b.WriteString("=== USER INSTRUCTION ===\n")

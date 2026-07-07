@@ -186,6 +186,157 @@ func TestSanitizeDCD(t *testing.T) {
 	}
 }
 
+func TestIsIncomplete(t *testing.T) {
+	tests := []struct {
+		name       string
+		dcd        string
+		incomplete bool
+	}{
+		{
+			name:       "less than 30 lines",
+			dcd:        "[section 0]\nname=test\nvar=info\nkeys=title\n\n--- BODY ---\n<p>{{info.title}}</p>",
+			incomplete: true,
+		},
+		{
+			name: "unpredictable sections empty",
+			dcd: `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+<p>line 1</p>
+<p>line 2</p>
+<p>line 3</p>
+<p>line 4</p>
+<p>line 5</p>
+<p>line 6</p>
+<p>line 7</p>
+<p>line 8</p>
+<p>line 9</p>
+<p>line 10</p>
+<p>line 11</p>
+<p>line 12</p>
+<p>line 13</p>
+<p>line 14</p>
+<p>line 15</p>
+<p>line 16</p>
+<p>line 17</p>
+<p>line 18</p>
+<p>line 19</p>
+<p>line 20</p>
+<p>line 21</p>
+<p>line 22</p>
+<p>line 23</p>
+<p>line 24</p>
+<p>line 25</p>
+<p>line 26</p>
+<p>line 27</p>
+<p>line 28</p>
+
+[object-unpredictable]
+
+[keys-unpredictable]`,
+			incomplete: true,
+		},
+		{
+			name: "unpredictable sections with content",
+			dcd: `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+<p>line 1</p>
+<p>line 2</p>
+<p>line 3</p>
+<p>line 4</p>
+<p>line 5</p>
+<p>line 6</p>
+<p>line 7</p>
+<p>line 8</p>
+<p>line 9</p>
+<p>line 10</p>
+<p>line 11</p>
+<p>line 12</p>
+<p>line 13</p>
+<p>line 14</p>
+<p>line 15</p>
+<p>line 16</p>
+<p>line 17</p>
+<p>line 18</p>
+<p>line 19</p>
+<p>line 20</p>
+<p>line 21</p>
+<p>line 22</p>
+<p>line 23</p>
+<p>line 24</p>
+<p>line 25</p>
+<p>line 26</p>
+<p>line 27</p>
+<p>line 28</p>
+
+[object-unpredictable]
+var=extras
+keys=field1, field2
+
+[keys-unpredictable]
+var=extras`,
+			incomplete: false,
+		},
+		{
+			name: "no unpredictable sections, body >= section",
+			dcd: `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+<p>line 1</p>
+<p>line 2</p>
+<p>line 3</p>
+<p>line 4</p>
+<p>line 5</p>
+<p>line 6</p>
+<p>line 7</p>
+<p>line 8</p>
+<p>line 9</p>
+<p>line 10</p>
+<p>line 11</p>
+<p>line 12</p>
+<p>line 13</p>
+<p>line 14</p>
+<p>line 15</p>
+<p>line 16</p>
+<p>line 17</p>
+<p>line 18</p>
+<p>line 19</p>
+<p>line 20</p>
+<p>line 21</p>
+<p>line 22</p>
+<p>line 23</p>
+<p>line 24</p>
+<p>line 25</p>
+<p>line 26</p>
+<p>line 27</p>
+<p>line 28</p>`,
+			incomplete: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isIncomplete(tt.dcd)
+			if got != tt.incomplete {
+				t.Errorf("isIncomplete() = %v, want %v", got, tt.incomplete)
+			}
+		})
+	}
+}
+
 func TestMultipleProviders(t *testing.T) {
 	os.Setenv("GEMINI_API_KEY", "test-key")
 	os.Setenv("OPENAI_API_KEY", "test-key")

@@ -11,7 +11,7 @@ type UnpredictableObject struct {
 	IsArray bool
 }
 
-var reObjectLine = regexp.MustCompile(`^\- (\w+)=(\[\]|)(.+)$`)
+var reObjectLine = regexp.MustCompile(`^(?:\-\s)?(\w+)=(\[\]|)(.+)$`)
 
 func parseUnpredictableObjects(dcd string) []UnpredictableObject {
 	section := extractSection(dcd, "[object-unpredictable]")
@@ -44,6 +44,7 @@ func parseUnpredictableKeys(dcd string) []string {
 		return nil
 	}
 
+	var out []string
 	for _, line := range strings.Split(section, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "[") || strings.HasPrefix(line, "#") {
@@ -52,9 +53,9 @@ func parseUnpredictableKeys(dcd string) []string {
 		if strings.HasPrefix(line, "- ") {
 			line = strings.TrimPrefix(line, "- ")
 		}
-		return splitFields(line)
+		out = append(out, splitFields(line)...)
 	}
-	return nil
+	return out
 }
 
 func extractSection(dcd, header string) string {

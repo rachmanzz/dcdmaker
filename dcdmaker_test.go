@@ -689,6 +689,60 @@ keys=title
 	}
 }
 
+func TestUnpredictableParsingWithoutDash(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+
+[object-unpredictable]
+basic=jam_terbilang_akta, gelar_notaris
+pendiri=[]tanggal_lahir, alamat, kota
+
+[keys-unpredictable]
+field1, field2
+field3, field4
+`
+	objs := parseUnpredictableObjects(dcd)
+	if len(objs) != 2 {
+		t.Fatalf("expected 2 objects without dash prefix, got %d", len(objs))
+	}
+	if objs[0].Name != "basic" || objs[0].IsArray || len(objs[0].Fields) != 2 {
+		t.Fatalf("bad first object: %+v", objs[0])
+	}
+	if objs[1].Name != "pendiri" || !objs[1].IsArray || len(objs[1].Fields) != 3 {
+		t.Fatalf("bad second object: %+v", objs[1])
+	}
+
+	keys := parseUnpredictableKeys(dcd)
+	if len(keys) != 4 {
+		t.Fatalf("expected 4 keys (2 lines), got %d: %v", len(keys), keys)
+	}
+}
+
+func TestUnpredictableParsingMixed(t *testing.T) {
+	dcd := `[object-unpredictable]
+- user=[]name, email
+guest=name, phone
+
+[keys-unpredictable]
+- title, author
+tags, category
+`
+	objs := parseUnpredictableObjects(dcd)
+	if len(objs) != 2 {
+		t.Fatalf("expected 2 objects mixed, got %d", len(objs))
+	}
+
+	keys := parseUnpredictableKeys(dcd)
+	if len(keys) != 4 {
+		t.Fatalf("expected 4 keys mixed, got %d: %v", len(keys), keys)
+	}
+}
+
 func TestBuildPromptWithoutPredictableKeys(t *testing.T) {
 	prompt := buildPrompt("hello", nil)
 

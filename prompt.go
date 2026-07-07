@@ -95,10 +95,10 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")
 	b.WriteString("You MUST include these sections. EVERY new variable/field introduced for itemized loops, dynamic placeholders, or unexpected content MUST be declared here. Do NOT leave these sections empty.\n\n")
 	b.WriteString("[object-unpredictable]\n")
-	b.WriteString("var=objectVarName\n")
-	b.WriteString("keys=field1, field2, field3\n\n")
+	b.WriteString("objectVarName=field1, field2, field3\n")
+	b.WriteString("arrayVarName=[]field1, field2, field3\n\n")
 	b.WriteString("[keys-unpredictable]\n")
-	b.WriteString("var=objectVarName\n\n")
+	b.WriteString("field1, field2, field3\n\n")
 
 	if strings.TrimSpace(userPrompt) != "" {
 		b.WriteString("=== USER INSTRUCTION ===\n")

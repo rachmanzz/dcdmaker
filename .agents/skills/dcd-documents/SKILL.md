@@ -424,18 +424,17 @@ Objects/keys whose count/structure cannot be known from the source document alon
 
 ```
 [object-unpredictable]
-var=signatures
-keys=signer_name, position, date
+signatures=signer_name, position, date          ← single object
+items=[]name, qty, price                         ← array of objects
 
 [keys-unpredictable]
-var=signatures
+signer_name, position, date
 ```
 
 **Rules:**
-- `[object-unpredictable]` declares that `var` contains objects whose keys repeat unpredictably
-- `[keys-unpredictable]` declares that `var` has keys whose presence is unpredictable
-- Both are required in DCD output when the source document contains such variability
-- Always declare alongside a matching `var=` and `keys=` in the parent section
+- `[object-unpredictable]` declares objects/arrays whose keys are not known ahead. Use `name=field, field` for single object, `name=[]field, field` for array of objects.
+- `[keys-unpredictable]` declares flat key mappings across sections.
+- Both are required in DCD output when the source document contains such variability.
 
 ### Variables
 

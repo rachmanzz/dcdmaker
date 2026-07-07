@@ -78,7 +78,7 @@ func OpenAI(opts ...OpenAIOption) Provider {
 	cfg := &openAIConfig{
 		Model:       "gpt-4o",
 		Temperature: 0.5,
-		MaxTokens:   8192,
+		MaxTokens:   16384,
 		Timeout:     60 * time.Second,
 	}
 	for _, opt := range opts {

@@ -284,11 +284,12 @@ func resolveChunks(ctx context.Context, provider Provider, result string) string
 	full.WriteString(result)
 
 	for range 3 {
-		if !isTruncated(full.String()) {
+		dcd := full.String()
+		if !isTruncated(dcd) && !isIncomplete(dcd) {
 			break
 		}
 
-		clean := strings.TrimSuffix(full.String(), "\n\n<TRUNCATED/>")
+		clean := strings.TrimSuffix(dcd, "\n\n<TRUNCATED/>")
 		prompt := continuationPrompt(clean)
 
 		chunk, err := provider.Generate(ctx, prompt)

@@ -50,7 +50,10 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("=== INSTRUCTION ===\n")
 	b.WriteString("Generate a DCD template that is 99% identical to the source document.\n")
 	b.WriteString("DO NOT use default values. DO NOT assume anything.\n")
-	b.WriteString("Extract ALL values directly from the SOURCE DOCUMENT XML below.\n\n")
+	b.WriteString("Extract ALL values directly from the SOURCE DOCUMENT XML below.\n")
+	b.WriteString("You MUST scan the ENTIRE source document from first paragraph to last paragraph. Do NOT stop early, skip sections, or summarize.\n")
+	b.WriteString("Every single paragraph, table, and list in the source MUST have a corresponding DCD entry in the output.\n")
+	b.WriteString("The output template must cover 100% of the document — exactly as written.\n\n")
 
 	b.WriteString("=== CRITICAL: NO DCD SYNTAX ASSUMPTIONS ===\n")
 	b.WriteString("The DCD DSL SPECIFICATION above is the COMPLETE and AUTHORITATIVE reference.\n")

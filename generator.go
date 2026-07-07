@@ -69,6 +69,28 @@ func isTruncated(dcd string) bool {
 	return false
 }
 
+func isIncomplete(dcd string) bool {
+	dcd = strings.TrimSpace(dcd)
+
+	lines := strings.Split(dcd, "\n")
+	if len(lines) < 30 {
+		return true
+	}
+
+	hasUnpredictable := strings.Contains(dcd, "[object-unpredictable]") ||
+		strings.Contains(dcd, "[keys-unpredictable]")
+	if !hasUnpredictable && strings.Count(dcd, "[section") >= 1 {
+		bodyCount := strings.Count(dcd, "--- BODY ---")
+		sectionCount := strings.Count(dcd, "[section")
+		if bodyCount >= sectionCount {
+			return false
+		}
+		return true
+	}
+
+	return false
+}
+
 func sanitizeDCD(dcd string) string {
 	dcd = strings.TrimSpace(dcd)
 

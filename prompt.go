@@ -81,7 +81,10 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- Split sections by context/topic: [section 0] for header, [section 1] for parties, [section 2] for transaction, etc. Each section MUST have maximum 3 var and maximum 15 keys. Use [section:next-page N] to start new section on new page.\n")
 	b.WriteString("- PREDICTED VARIABLES: use exact names as listed above — no changes. UNPREDICTABLE [keys-unpredictable] / [object-unpredictable]: infer names from document context (strong assumptions allowed, e.g. 'Invoice No:' → invoice_no).\n")
 	b.WriteString("- `<w:*>`, `<p>`, `<li>`, `<col>` support size/font-size and color attributes (see SKILL.md for details).\n")
-	b.WriteString("- Output ONLY raw DCD syntax, no markdown fences, no extra text.\n\n")
+	b.WriteString("- Output ONLY raw DCD syntax, no markdown fences, no extra text.\n")
+	b.WriteString("- CRITICAL: Every variable listed in `var=` AND every key listed in `keys=` MUST be used in the --- BODY --- at least once. Do NOT declare unused variables or keys.\n")
+	b.WriteString("- CRITICAL: Every `{{var.field}}` in body MUST have `var` listed in `var=` and `field` listed in `keys=` of the same [section].\n")
+	b.WriteString("- CRITICAL: Every `<loop x from source>` in body MUST have `source` listed in `var=` of the same [section]. The fields accessed as `{{x.field}}` inside the loop MUST be listed in `keys=`.\n\n")
 
 	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")
 	b.WriteString("After the main template sections, include:\n\n")

@@ -202,6 +202,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 			result = sanitizeDCD(result)
 
 			if isDCDValid(result) {
+				result = fixVarsAndKeys(result)
 				m.lastProvider = provider.Name()
 				m.lastResult = result
 				return result, nil

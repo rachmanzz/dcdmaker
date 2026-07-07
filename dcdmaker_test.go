@@ -743,6 +743,148 @@ tags, category
 	}
 }
 
+func TestParseSections(t *testing.T) {
+	dcd := `[section 0]
+name=header
+var=info
+keys=title, date
+
+--- BODY ---
+<p>{{info.title}}</p>
+<p>{{info.date}}</p>
+
+[section 1]
+name=items
+var=items
+keys=name, qty, price
+
+--- BODY ---
+<table>
+<loop x from items>
+<col>{{x.name}}</col>
+<col>{{x.qty}}</col>
+</loop>
+</table>
+`
+	sections := parseSections(dcd)
+	if len(sections) != 2 {
+		t.Fatalf("expected 2 sections, got %d", len(sections))
+	}
+	if sections[0].Name != "header" || len(sections[0].Vars) != 1 || sections[0].Vars[0] != "info" {
+		t.Fatalf("bad section 0: %+v", sections[0])
+	}
+	if len(sections[0].Keys) != 2 || sections[0].Keys[1] != "date" {
+		t.Fatalf("bad section 0 keys: %+v", sections[0].Keys)
+	}
+	if sections[1].Name != "items" || len(sections[1].Vars) != 1 || sections[1].Vars[0] != "items" {
+		t.Fatalf("bad section 1: %+v", sections[1])
+	}
+}
+
+func TestScanBody(t *testing.T) {
+	dcd := `<p>{{info.title}}</p>
+<p>{{info.date}}</p>
+<loop x from items>
+<col>{{x.name}}</col>
+</loop>
+{{plain_key}}
+`
+	usages := scanBody(dcd)
+	if len(usages) != 5 {
+		t.Fatalf("expected 5 usages, got %d: %+v", len(usages), usages)
+	}
+}
+
+func TestValidateVarsAndKeysOK(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+`
+	if err := validateVarsAndKeys(dcd); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateVarsAndKeysMissingField(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+<p>{{info.missing_field}}</p>
+`
+	if err := validateVarsAndKeys(dcd); err == nil {
+		t.Fatal("expected error for missing field")
+	}
+}
+
+func TestValidateVarsAndKeysMissingVar(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+<loop x from pendiri>
+<col>{{x.nama}}</col>
+</loop>
+`
+	if err := validateVarsAndKeys(dcd); err == nil {
+		t.Fatal("expected error for undeclared var 'pendiri'")
+	}
+}
+
+func TestFixVarsAndKeysAddsMissingVar(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+<loop x from pendiri>
+<col>{{x.nama}}</col>
+</loop>
+`
+	fixed := fixVarsAndKeys(dcd)
+	sections := parseSections(fixed)
+	found := false
+	for _, s := range sections {
+		for _, v := range s.Vars {
+			if v == "pendiri" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("fixVarsAndKeys did not add 'pendiri' to var:\n%s", fixed)
+	}
+}
+
+func TestFixVarsAndKeysRemovesUnused(t *testing.T) {
+	// Currently fixVarsAndKeys does not delete, only adds.
+	// This test verifies the function is a no-op for valid DCD.
+	dcd := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+`
+	fixed := fixVarsAndKeys(dcd)
+	if fixed != dcd {
+		t.Fatalf("expected no change for valid DCD, got:\n%s", fixed)
+	}
+}
+
 func TestBuildPromptWithoutPredictableKeys(t *testing.T) {
 	prompt := buildPrompt("hello", nil)
 

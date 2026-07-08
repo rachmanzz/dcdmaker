@@ -1104,6 +1104,58 @@ func TestBuildPromptWithoutPredictableKeys(t *testing.T) {
 	}
 }
 
+func TestFixLoopSyntax(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			"basic ol loop",
+			"<ol x from items>\n  {{x.label}}\n</ol>",
+			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>",
+		},
+		{
+			"basic ul loop",
+			"<ul x from items>\n  {{x.label}}\n</ul>",
+			"<loop:ul x from items>\n  {{x.label}}\n</loop:ul>",
+		},
+		{
+			"ol loop with li inside (wrong content, but syntax fixed)",
+			"<ol x from items>\n  <li>{{x.label}}</li>\n</ol>",
+			"<loop:ol x from items>\n  <li>{{x.label}}</li>\n</loop:ol>",
+		},
+		{
+			"no wrong loops — unchanged",
+			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>",
+			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>",
+		},
+		{
+			"regular lists unchanged",
+			"<ol>\n  <li>item</li>\n</ol>\n<ul>\n  <li>item</li>\n</ul>",
+			"<ol>\n  <li>item</li>\n</ol>\n<ul>\n  <li>item</li>\n</ul>",
+		},
+		{
+			"mixed — loop fixed, list unchanged",
+			"<ol x from items>\n  {{x.label}}\n</ol>\n<ol>\n  <li>regular</li>\n</ol>",
+			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>\n<ol>\n  <li>regular</li>\n</ol>",
+		},
+		{
+			"multiple loops",
+			"<ol x from items>\n  {{x.name}}\n</ol>\n<ul x from extras>\n  {{x.desc}}\n</ul>",
+			"<loop:ol x from items>\n  {{x.name}}\n</loop:ol>\n<loop:ul x from extras>\n  {{x.desc}}\n</loop:ul>",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := fixLoopSyntax(tt.in)
+			if got != tt.want {
+				t.Errorf("got:\n%s\n\nwant:\n%s", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCheckUnpredictableOverlap_NoPredictedKeys(t *testing.T) {
 	dcd := `[object-unpredictable]
 info=nama, alamat

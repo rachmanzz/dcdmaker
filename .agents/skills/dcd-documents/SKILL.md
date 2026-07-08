@@ -23,8 +23,30 @@ The following rules are ABSOLUTE. Output violating these WILL be rejected:
 ### ❌ DO NOT:
 - `<ol x from>` / `<ul x from>` — use `<loop:ol>` / `<loop:ul>` instead (loops always need `loop:` prefix)
 - Redeclare any predicted variable name, key, or field in `[object-unpredictable]` / `[keys-unpredictable]`
+- Put section `var=` entries into `[keys-unpredictable]` — a variable is either predictable (belongs in `var=`) or unpredictable (belongs in `[keys-unpredictable]`), NOT both
 - Use tags, attributes, or syntax not explicitly listed in this specification
 - Use `:` for assignments — `=` is the only assignment operator (except `[field:format]`, `[style:heading-N]`, `<loop:ol>`, `<loop:ul>`)
+
+### ❌ Contoh Violasi — Jangan:
+```ini
+[section 0]
+var=bidang_usaha_utama, jumlah_anggota_dewan_komisaris
+
+[keys-unpredictable]
+bidang_usaha_utama, jumlah_anggota_dewan_komisaris ← SALAH! sudah di var=
+```
+
+### ❌ Contoh Violasi — Jangan:
+```ini
+[section 0]
+var=modal, jumlah_anggota_dewan_komisaris
+
+[object-unpredictable]
+pendiri=[]nama, bidang_usaha_utama           ← bidang_usaha_utama bukan punya pendiri
+
+[keys-unpredictable]
+bidang_usaha_utama, jumlah_anggota_dewan_komisaris ← SALAH! sudah di var=
+```
 
 ### ✅ DO:
 - Every `var=` entry AND every `keys=` entry MUST be used in `--- BODY ---`

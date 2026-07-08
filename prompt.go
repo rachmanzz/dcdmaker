@@ -122,6 +122,11 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 		}
 		b.WriteString("\n")
 	}
+	b.WriteString("=== CRITICAL: SECTION VARS ARE PREDICTABLE ===\n")
+	b.WriteString("Any variable you put in a section `var=` is a PREDICTABLE variable — it is already declared.\n")
+	b.WriteString("Do NOT also put those same variable names in `[keys-unpredictable]` or `[object-unpredictable]`.\n")
+	b.WriteString("A variable belongs in ONE place: either `var=` (predictable) OR unpredictable sections, never both.\n")
+	b.WriteString("Example: if `bidang_usaha_utama` is in a section `var=`, it MUST NOT appear in `[keys-unpredictable]`.\n\n")
 	b.WriteString("[object-unpredictable]\n")
 	b.WriteString("objectVarName=field1, field2, field3\n\n")
 	b.WriteString("[keys-unpredictable]\n")

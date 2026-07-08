@@ -198,6 +198,67 @@ func isLoopVarInSection(v string, sections []sectionInfo) bool {
 	return false
 }
 
+// checkUnpredictableOverlap validates that [object-unpredictable] and [keys-unpredictable]
+// do not redeclare any variable name, key, or field that is already declared in predictableKeys.
+// Returns (true, "") if clean, or (false, reason) on first overlap found.
+func checkUnpredictableOverlap(dcd string, predictableKeys []KeyDef) (bool, string) {
+	if len(predictableKeys) == 0 {
+		return true, ""
+	}
+
+	// Collect all predicted names and fields
+	predictedNames := map[string]bool{}
+	predictedFields := map[string]bool{}
+	for _, k := range predictableKeys {
+		switch k.Type {
+		case VarObject, VarArray:
+			predictedNames[k.Name] = true
+			if k.FieldDefs != nil {
+				for _, f := range k.FieldDefs {
+					predictedFields[f.Name] = true
+				}
+			} else {
+				for _, f := range k.Fields {
+					predictedFields[f] = true
+				}
+			}
+		case VarKeys:
+			if k.FieldDefs != nil {
+				for _, f := range k.FieldDefs {
+					predictedNames[f.Name] = true
+					predictedFields[f.Name] = true
+				}
+			} else {
+				for _, f := range k.Fields {
+					predictedNames[f] = true
+					predictedFields[f] = true
+				}
+			}
+		}
+	}
+
+	// Check [object-unpredictable] — object names and their fields
+	for _, obj := range parseUnpredictableObjects(dcd) {
+		if predictedNames[obj.Name] {
+			return false, fmt.Sprintf("unpredictable object %q redeclares predicted variable %q", obj.Name, obj.Name)
+		}
+		for _, f := range obj.Fields {
+			if predictedFields[f] {
+				return false, fmt.Sprintf("unpredictable field %q in object %q redeclares predicted field", f, obj.Name)
+			}
+		}
+	}
+
+	// Check [keys-unpredictable] — flat key entries
+	for _, k := range parseUnpredictableKeys(dcd) {
+		if predictedNames[k] || predictedFields[k] {
+			return false, fmt.Sprintf("unpredictable key %q redeclares predicted variable", k)
+		}
+	}
+
+	return true, ""
+}
+
 func contains(list []string, s string) bool {
 	for _, item := range list {
 		if item == s {

@@ -222,6 +222,23 @@ func (m *Maker) generate(data []byte) (string, error) {
 
 			valid, reason := isDCDValid(result)
 			if valid {
+				ok, overlapReason := checkUnpredictableOverlap(result, m.predictableKeys)
+				if !ok {
+					lastErr = fmt.Errorf("%s attempt %d: %s", provider.Name(), attempt+1, overlapReason)
+					if debug {
+						fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: %s\n",
+							provider.Name(), attempt+1, overlapReason)
+						sanPath := fmt.Sprintf("dcd_debug_%s_attempt_%d_sanitized.dcd", provider.Name(), attempt+1)
+						os.WriteFile(sanPath, []byte(result), 0644)
+					}
+					prompt = originalPrompt + fmt.Sprintf(
+						"\n\nThe previous attempt failed: %s.\n"+
+							"Invalid output:\n---\n%s\n---\n\n"+
+							"Regenerate a valid DCD template, fixing the issue above:\n",
+						overlapReason, result,
+					)
+					continue
+				}
 				result = fixVarsAndKeys(result)
 				m.lastProvider = provider.Name()
 				m.lastResult = result

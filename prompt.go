@@ -96,10 +96,34 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("You MUST include these sections. EVERY new variable/field introduced for itemized loops, dynamic placeholders, or unexpected content MUST be declared here. Do NOT leave these sections empty.\n\n")
 	if len(predictableKeys) > 0 {
 		b.WriteString("CRITICAL: Variables listed in === PREDICTED VARIABLES === above are already declared. Do NOT redeclare them in [object-unpredictable] or [keys-unpredictable]. These sections are ONLY for NEW variables/fields NOT in the predicted list.\n\n")
+
+		b.WriteString("=== FORBIDDEN IN UNPREDICTABLE ===\n")
+		b.WriteString("The following names/keys are already declared as predicted variables. Do NOT put them in [object-unpredictable] or [keys-unpredictable]:\n")
+		for _, k := range predictableKeys {
+			switch k.Type {
+			case VarObject, VarArray:
+				b.WriteString(fmt.Sprintf("  • %s", k.Name))
+				if k.FieldDefs != nil {
+					for _, f := range k.FieldDefs {
+						b.WriteString(fmt.Sprintf(", %s", f.Name))
+					}
+				} else if len(k.Fields) > 0 {
+					b.WriteString(fmt.Sprintf(", %s", strings.Join(k.Fields, ", ")))
+				}
+				b.WriteString("\n")
+			case VarKeys:
+				for _, f := range k.FieldDefs {
+					b.WriteString(fmt.Sprintf("  • %s\n", f.Name))
+				}
+				for _, f := range k.Fields {
+					b.WriteString(fmt.Sprintf("  • %s\n", f))
+				}
+			}
+		}
+		b.WriteString("\n")
 	}
 	b.WriteString("[object-unpredictable]\n")
-	b.WriteString("objectVarName=field1, field2, field3\n")
-	b.WriteString("arrayVarName=[]field1, field2, field3\n\n")
+	b.WriteString("objectVarName=field1, field2, field3\n\n")
 	b.WriteString("[keys-unpredictable]\n")
 	b.WriteString("field1, field2, field3\n\n")
 

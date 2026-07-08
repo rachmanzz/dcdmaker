@@ -69,11 +69,13 @@ type Maker struct {
 	predictableKeys []KeyDef
 	lastProvider    string
 	lastResult      string
+	maxRetries      int
 }
 
 func NewMaker(providers ...Provider) *Maker {
 	return &Maker{
-		providers: providers,
+		providers:  providers,
+		maxRetries: 3,
 	}
 }
 
@@ -94,6 +96,14 @@ func (m *Maker) Resume(enabled bool) *Maker {
 
 func (m *Maker) PredictableKeys(keys ...KeyDef) *Maker {
 	m.predictableKeys = keys
+	return m
+}
+
+func (m *Maker) MaxRetries(n int) *Maker {
+	if n < 1 {
+		n = 1
+	}
+	m.maxRetries = n
 	return m
 }
 
@@ -175,20 +185,22 @@ func (m *Maker) Run(output string) error {
 }
 
 func (m *Maker) generate(data []byte) (string, error) {
-	prompt := buildPrompt(m.userPrompt, m.predictableKeys)
+	originalPrompt := buildPrompt(m.userPrompt, m.predictableKeys)
+	prompt := originalPrompt
 	ctx := context.Background()
 
 	delays := []time.Duration{5 * time.Second, 10 * time.Second, 15 * time.Second}
+	debug := os.Getenv("DCD_DEBUG") == "true"
 
 	for pi, provider := range m.providers {
 		var lastErr error
 
-		for attempt := range 3 {
+		for attempt := range m.maxRetries {
 			if attempt > 0 {
 				select {
 				case <-ctx.Done():
 					return "", ctx.Err()
-				case <-time.After(delays[attempt-1]):
+				case <-time.After(delays[min(attempt-1, len(delays)-1)]):
 				}
 			}
 
@@ -198,27 +210,42 @@ func (m *Maker) generate(data []byte) (string, error) {
 				continue
 			}
 
-			result = resolveChunks(ctx, provider, result)
+			if debug {
+				rawPath := fmt.Sprintf("dcd_debug_%s_attempt_%d_raw.dcd", provider.Name(), attempt+1)
+				os.WriteFile(rawPath, []byte(result), 0644)
+				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: raw output saved to %s (%d bytes)\n",
+					provider.Name(), attempt+1, rawPath, len(result))
+			}
+
+			result = resolveChunks(ctx, provider, result, m.maxRetries)
 			result = sanitizeDCD(result)
 
-			if isDCDValid(result) {
+			valid, reason := isDCDValid(result)
+			if valid {
 				result = fixVarsAndKeys(result)
 				m.lastProvider = provider.Name()
 				m.lastResult = result
 				return result, nil
 			}
 
-			lastErr = fmt.Errorf("%s attempt %d: invalid DCD output", provider.Name(), attempt+1)
-			prompt = fmt.Sprintf(
-				"The previous output was not valid DCD syntax. "+
-					"Output ONLY valid DCD template, no explanations.\n\n"+
-					"Invalid output:\n---\n%s\n---\n\nRegenerate:",
-				result,
+			lastErr = fmt.Errorf("%s attempt %d: %s", provider.Name(), attempt+1, reason)
+			if debug {
+				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: %s\n",
+					provider.Name(), attempt+1, reason)
+				sanPath := fmt.Sprintf("dcd_debug_%s_attempt_%d_sanitized.dcd", provider.Name(), attempt+1)
+				os.WriteFile(sanPath, []byte(result), 0644)
+			}
+
+			prompt = originalPrompt + fmt.Sprintf(
+				"\n\nThe previous attempt failed: %s.\n"+
+					"Invalid output:\n---\n%s\n---\n\n"+
+					"Regenerate a valid DCD template, fixing the issue above:\n",
+				reason, result,
 			)
 		}
 
 		if pi < len(m.providers)-1 {
-			prompt = buildPrompt(m.userPrompt, m.predictableKeys)
+			prompt = originalPrompt
 			continue
 		}
 
@@ -265,7 +292,8 @@ func (m *Maker) resumeSession(session *Session, output string) error {
 		}
 
 		dcd := sanitizeDCD(full.String())
-		if isDCDValid(dcd) {
+		valid, _ := isDCDValid(dcd)
+		if valid {
 			m.lastProvider = provider.Name()
 			if m.resume {
 				_ = clearSession(output)
@@ -279,11 +307,11 @@ func (m *Maker) resumeSession(session *Session, output string) error {
 	return fmt.Errorf("dcdmaker: resume exhausted retries")
 }
 
-func resolveChunks(ctx context.Context, provider Provider, result string) string {
+func resolveChunks(ctx context.Context, provider Provider, result string, maxChunks int) string {
 	var full strings.Builder
 	full.WriteString(result)
 
-	for range 3 {
+	for range maxChunks {
 		dcd := full.String()
 		if !isTruncated(dcd) && !isIncomplete(dcd) {
 			break

@@ -126,13 +126,28 @@ func TestIsDCDValid(t *testing.T) {
 			dcd:   "[style]\nlayout=A4\nunit=inch\nm=1\n\n[title]\ntitle=Invoice\n\n[section 0]\nname=header\nvar=info\nkeys=invoice_no, date, customer\n\n--- BODY ---\n<h1>{{info.invoice_no}}</h1>\n<p>Date: {{info.date}}</p>\n<p>Customer: {{info.customer}}</p>",
 			valid: true,
 		},
+		{
+			name:  "ol with type attribute",
+			dcd:   "[section 0]\nname=test\nvar=info\nkeys=title\n\n--- BODY ---\n<ol type=a>\n<li>{{info.title}}</li>\n</ol>",
+			valid: true,
+		},
+		{
+			name:  "loop:ol with type attribute",
+			dcd:   "[section 0]\nname=test\nvar=info, items\nkeys=title\n\n--- BODY ---\n<loop:ol type=a x from items>\n<li>{{x.name}}</li>\n</loop:ol>",
+			valid: true,
+		},
+		{
+			name:  "unbalanced ol with type",
+			dcd:   "[section 0]\nname=test\nvar=info\nkeys=title\n\n--- BODY ---\n<ol type=a>\n<li>{{info.title}}</li>",
+			valid: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := isDCDValid(tt.dcd)
+			got, reason := isDCDValid(tt.dcd)
 			if got != tt.valid {
-				t.Errorf("isDCDValid() = %v, want %v", got, tt.valid)
+				t.Errorf("isDCDValid() = %v, want %v (reason: %s)", got, tt.valid, reason)
 			}
 		})
 	}
@@ -662,8 +677,9 @@ keys=invoice_no, date, customer
 [keys-unpredictable]
 - data=po_number, department
 `
-	if !isDCDValid(dcd) {
-		t.Error("expected DCD with unpredictable sections to be valid")
+	valid, reason := isDCDValid(dcd)
+	if !valid {
+		t.Errorf("expected DCD with unpredictable sections to be valid (reason: %s)", reason)
 	}
 }
 
@@ -708,8 +724,9 @@ keys=title, items.name, items.qty, items.unit_price, items.total
 [object-unpredictable]
 - info=shipping_address, payment_terms
 `
-	if !isDCDValid(dcd) {
-		t.Error("expected full DCD with predictable keys to be valid")
+	valid, reason := isDCDValid(dcd)
+	if !valid {
+		t.Errorf("expected full DCD with predictable keys to be valid (reason: %s)", reason)
 	}
 }
 
@@ -731,6 +748,23 @@ func TestMakerPredictableKeysChain(t *testing.T) {
 	}
 	if !m.resume {
 		t.Error("expected resume true")
+	}
+}
+
+func TestMakerMaxRetries(t *testing.T) {
+	m := NewMaker()
+	if m.maxRetries != 3 {
+		t.Fatalf("expected default maxRetries=3, got %d", m.maxRetries)
+	}
+
+	m.MaxRetries(5)
+	if m.maxRetries != 5 {
+		t.Fatalf("expected maxRetries=5, got %d", m.maxRetries)
+	}
+
+	m.MaxRetries(0)
+	if m.maxRetries != 1 {
+		t.Fatalf("expected maxRetries clamped to 1, got %d", m.maxRetries)
 	}
 }
 

@@ -1,41 +1,46 @@
 package dcdmaker
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 )
 
-func isDCDValid(dcd string) bool {
+func isDCDValid(dcd string) (bool, string) {
 	dcd = strings.TrimSpace(dcd)
 
 	if len(dcd) == 0 {
-		return false
+		return false, "empty output"
 	}
 
 	hasSection := strings.Contains(dcd, "[section")
 	hasBody := strings.Contains(dcd, "--- BODY ---")
 
 	if !hasSection && !hasBody {
-		return false
+		return false, "missing [section] or --- BODY ---"
 	}
 
 	tags := []struct{ open, close string }{
 		{"<loop", "</loop"},
 		{"<table", "</table"},
-		{"<ul>", "</ul>"},
-		{"<ol>", "</ol>"},
+		{"<ul", "</ul"},
+		{"<ol", "</ol"},
 	}
 	for _, t := range tags {
-		if strings.Count(dcd, t.open) != strings.Count(dcd, t.close) {
-			return false
+		o := strings.Count(dcd, t.open)
+		c := strings.Count(dcd, t.close)
+		if o != c {
+			return false, fmt.Sprintf("unbalanced %s: %d open, %d close", t.open, o, c)
 		}
 	}
 
-	if strings.Count(dcd, "{{") != strings.Count(dcd, "}}") {
-		return false
+	openCurl := strings.Count(dcd, "{{")
+	closeCurl := strings.Count(dcd, "}}")
+	if openCurl != closeCurl {
+		return false, fmt.Sprintf("unbalanced {{ }}: %d open, %d close", openCurl, closeCurl)
 	}
 
-	return true
+	return true, ""
 }
 
 func isTruncated(dcd string) bool {
@@ -53,8 +58,8 @@ func isTruncated(dcd string) bool {
 	tags := []struct{ open, close string }{
 		{"<loop", "</loop"},
 		{"<table", "</table"},
-		{"<ul>", "</ul>"},
-		{"<ol>", "</ol>"},
+		{"<ul", "</ul"},
+		{"<ol", "</ol"},
 	}
 	for _, t := range tags {
 		if strings.Count(dcd, t.open) != strings.Count(dcd, t.close) {

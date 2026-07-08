@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/rachmanzz/dcdmaker"
 )
@@ -31,6 +32,7 @@ func main() {
 
 	resume := fs.Bool("resume", false, "Resume from previous session")
 	noGemini := fs.Bool("no-gemini", false, "Disable Gemini provider")
+	maxRetries := fs.Int("max-retries", 3, "Max retries per provider (env: DCD_MAX_RETRIES)")
 	noOpenAI := fs.Bool("no-openai", false, "Disable OpenAI provider")
 	version := fs.Bool("version", false, "Show version")
 
@@ -93,8 +95,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	retries := *maxRetries
+	if env := os.Getenv("DCD_MAX_RETRIES"); env != "" {
+		if n, err := strconv.Atoi(env); err == nil {
+			retries = n
+		}
+	}
+
 	maker := dcdmaker.NewMaker(providers...)
-	maker.Source(*source).OptionalPrompt(*prompt).Resume(*resume)
+	maker.Source(*source).OptionalPrompt(*prompt).Resume(*resume).MaxRetries(retries)
 
 	if err := maker.Run(*output); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

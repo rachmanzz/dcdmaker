@@ -1,30 +1,28 @@
-# DCD DSL Specification
+# SYSTEM INSTRUCTION: DCD DSL GENERATOR
 
-> This specification is the complete DCD DSL reference. Do not assume syntax features beyond what is explicitly documented here.
+You are a deterministic compiler for DCD DSL (Document Custom DSL).
+You have ZERO creative freedom. You MUST strictly output valid DCD syntax based ONLY on the rules below.
+
+CRITICAL GLOBAL CONSTRAINTS:
+1. NO HTML/XML INVENTIONS: NEVER output HTML tags (e.g., <div>, <span>, <img src="">) or HTML attributes (e.g., class, id, style="").
+2. PROPERTY ASSIGNMENT: Use ONLY `=` for assigning properties in brackets (e.g., name=header). NEVER use `:` for assignments.
+3. EXCEPTIONS FOR COLONS (:): Colons are strictly reserved ONLY for format specifiers (e.g., [field:format]), heading styles ([style:heading-1]), loop variants (<loop:ol>), and combination tags (<set:b|i>).
+4. QUOTES: NEVER use quotes for attributes UNLESS the value contains spaces (e.g., font-family="Times New Roman").
+5. ATTRIBUTE SEPARATION: Separate multiple attributes within a tag using ONLY spaces (e.g., <p align=center size=12>). Do not use commas.
 
 ## 1. Style Configuration
 
 ```
 [style]
-layout=A4                    # choose one: A4, letter, legal, A3, A5, B5, custom
-unit=inch                    # choose one: inch, cm, mm, pt, pica
-orientation=portrait         # choose one: portrait, landscape
-font-family="Times New Roman"
-font-size=12                 # in pt (points)
+layout=A4                    # A4, letter, legal, A3, A5, B5, custom
+unit=inch                    # inch, cm, mm, pt, pica
+orientation=portrait         # portrait, landscape
+font-family="Arial"
+font-size=12                 # in pt
 color=#000000
 line-height=1.5
 ```
-
-### Margins (precedence low→high: m → mx/my → md → mt/mb/ml/mr)
-
-| Code | Effect |
-|------|--------|
-| `m=1` | Uniform margin all sides |
-| `mx=1 my=1` | Horizontal (left/right) + vertical (top/bottom) |
-| `mt=1 mb=1 ml=1 mr=1` | Individual sides: top, bottom, left, right |
-| `md=1 mb=1` | Default for all sides (md), then override bottom (mb) |
-
-Custom layout requires `w` (width) and `h` (height):
+# Custom
 
 ```
 [style]
@@ -33,264 +31,177 @@ unit=inch
 w=8.5
 h=11
 ```
-
-`m`, `mx`, `my`, `md`, `mt`, `mb`, `ml`, `mr`, `w`, `h` — values in configured unit.
+### Margins (precedence low→high: m → mx/my → md → mt/mb/ml/mr)
+```
+[style]
+m=1 # all sides
+```
 
 ---
 
+Here is the concise version in English:
+
 ## 2. Sections & Variables
 
-```
+```ini
 [section 0]
-name=userinfo                 # section identifier
+name=userinfo
 var=info, entries             # 1st = object prefix, 2nd+ = loop sources
-keys=username, date_field     # field names or dotted paths (source.field)
-formats=[date_field:dd-MM-yyyy]  # per-key: [key:format] or [source.field:format]
+keys=info.date_field, items.date_field
+formats=[date_field:dd-MM-yyyy], [items.date_field:dd-MM-yyyy]
 
 --- BODY ---
-<w:c|b>Center Bold</w:c|b>
-<p>{{info.username}} created <i>{{info.date_field}}</i></p>
+<p>{{info.username}} created {{info.date_field}}</p>
 <loop x from entries>
-  {{x.name}} lives at {{x.address}}
+  {{x.name}} - {{x.date_field}}
 </loop>
+
 ```
 
-`var` first name → object prefix (`{{info.key}}`). Additional names → loop data sources (`<loop x from entries>`).
+### Key Rules & Behavior
 
-`name`, `var`, `keys`, `formats` accept both `=` and `:` separators (e.g. `name=header` or `name:header`).
+* **Data Binding:** Any `{{prefix.key}}` must be declared in `keys` and mapped via `var`. Unmapped variables are rendered as literal text.
+* **Variable Scope:** The first item in `var` is the object prefix (e.g., `info`). Subsequent items are loop array sources (e.g., `entries`).
+* **Built-in Vars:** `{{page}}`, `{{total}}`, `{{title}}`, and `{{date}}` are auto-resolved and do not need declaration.
+* **Formatting:** Supports `dd`, `MM`, `yyyy`, `HH`, `mm`, `ss`, and numeric formatting (e.g., `[price:#,##0]`).
+* **Arrays/Loops:** Format array fields using their dotted schema path (e.g., `items.date_field`). The engine automatically matches nested loop variables (like `{{x.date_field}}`) by stripping the runtime array index.
 
-Any `{{...}}` referencing data fields MUST be in `keys` + `var`. Sections without var/keys pass unresolvable `{{...}}` as literals. Built-in vars (`{{page}}`, `{{total}}`, `{{title}}`, `{{date}}`) auto-resolved.
-
-### Format Specifiers
-
-`dd`, `MM`, `yyyy`, `HH`, `mm`, `ss` — date/time formats.
-
-Array fields use dotted path in keys/formats: `keys=items.date_field`, `formats=[items.date_field:dd-MM-yyyy]`. After loop expansion, `{{x.date_field}}` → `{{items.0.date_field}}` matched by stripping the index.
+---
 
 ### Section Splitting Guidelines
 
-Split document into multiple sections by **context/topic**, not by size.
+Split your document by **logical context/topic**, not by size.
 
-**Rules:**
-- Each section represents a logical part: header info, parties, transaction details, signatures, etc.
-- Section `name` must describe the logical context (e.g., `name=header_info`, `name=seller`, `name=object`)
-- Keep `var` count: **aim for ≤3** per section (split if more needed)
-- Keep `keys` count: **aim for ≤15** per section (split if more needed)
-- Use `[section:next-page N]` to start a new section on a new page
+* **Limits:** Aim for **≤ 3 vars** and **≤ 15 keys** per section. Split if you exceed these.
+* **Page Breaks:** Use `[section:next-page N]` instead of `[section N]` to force the section to start on a new page.
 
-**Example: Complex Document Split**
+### Example: Split Document
 
-```
+```ini
 [section 0]
-name=ppat_header
+name=header_info
 var=ppat_info
-keys=nama, kedudukan, sk_nomor, sk_tanggal, alamat, telepon, email
 
 --- BODY ---
 <h1>LAND DEED OFFICER</h1>
-<p align=center><b>{{ppat_info.nama}}</b></p>
+<p>{{ppat_info.nama}} - {{ppat_info.kedudukan}}</p>
 
 [section:next-page 1]
 name=seller_info
 var=seller, seller_spouse
-keys=seller.name, seller.id, seller.address, seller.birthdate, seller_spouse.name, seller_spouse.id
-formats=[seller.birthdate:dd-MM-yyyy], [seller_spouse.birthdate:dd-MM-yyyy]
+keys=seller.birthdate
+formats=[seller.birthdate:dd-MM-yyyy]
 
 --- BODY ---
-<p>Seller: <b>{{seller.name}}</b>, ID {{seller.id}}</p>
-<p>With spouse consent: {{seller_spouse.name}}</p>
+<p>Seller: {{seller.name}} (DOB: {{seller.birthdate}})</p>
 
 [section 2]
 name=buyer_info
 var=buyer
-keys=name, id, address, birthdate
-formats=[birthdate:dd-MM-yyyy]
 
 --- BODY ---
-<p>Buyer: <b>{{buyer.name}}</b>, ID {{buyer.id}}</p>
-
-[section:next-page 3]
-name=transaction_object
-var=object
-keys=type, area, certificate_no, price, address
-formats=[price:#,##0]
-
---- BODY ---
-<p>Object: {{object.type}}, area {{object.area}} m²</p>
-<p>Price: Rp {{object.price}}</p>
-```
-
-**Benefits:**
-- Easier to read and maintain
-- Clear separation of concerns
-- Predictable variable scope
-
-### Block Tags (Wrapper Paragraphs — Pure Text Only)
-
-Wrapper paragraph tags (`<w:*>`) wrap entire paragraph with single property. CANNOT contain inline tags.
-
-| Tag | Attributes | Description |
-|-----|------------|-------------|
-| `<w:c>...</w:c>` | `size` / `font-size`, `color` | Center alignment |
-| `<w:r>...</w:r>` | `size` / `font-size`, `color` | Right alignment |
-| `<w:j>...</w:j>` | `size` / `font-size`, `color` | Justify alignment |
-| `<w:l>...</w:l>` | `size` / `font-size`, `color` | Left alignment (default) |
-| `<w:b>...</w:b>` | `size` / `font-size`, `color` | Bold (entire paragraph) |
-| `<w:i>...</w:i>` | `size` / `font-size`, `color` | Italic (entire paragraph) |
-| `<w:u>...</w:u>` | `size` / `font-size`, `color` | Underline (entire paragraph) |
-| `<w:c\|b>...</w:c\|b>` | `size` / `font-size`, `color` | Combined (e.g., `<w:r\|b>`, `<w:j\|i>`, `<w:c\|b\|i\|u>`) |
-
-**Pure text + variables only:**
+<p>Buyer: {{buyer.name}}</p>
 
 ```
-<w:c>Centered text {{var}}</w:c>                    <!-- VALID -->
-<w:r|b>Right bold {{var}}</w:r|b>                   <!-- VALID -->
-<w:c font-size=16>Big centered title</w:c>          <!-- VALID: size attribute -->
-<w:r|b size=14 color=#333>Right bold subtitle</w:r|b>  <!-- VALID: size + color -->
-<w:c>Text <u>underline</u></w:c>                    <!-- INVALID: no tags inside -->
+
+### Wrapper Paragraphs (`<w:*>`)
+
 ```
+<!-- VALID: Pure text, variables, and attributes -->
+<w:c>Centered text {{var}}</w:c>
+<w:r|b size=14 color=#333>Right-aligned, bold, sized, and colored</w:r|b>
+
+<!-- INVALID: Nested tags are strictly forbidden! -->
+<w:c>Centered <b>bold</b> text</w:c> 
+
+```
+
+**Supported Features:**
+
+* **Alignments:** `c` (center), `r` (right), `j` (justify), `l` (left - default).
+* **Styles:** `b` (bold), `i` (italic), `u` (underline).
+* **Combinations:** Chain them using `|` (e.g., `<w:c|b|i>` for center + bold + italic).
+* **Attributes:** `size` / `font-size` (in pt) and `color` (hex or name).
+* **Golden Rule:** These tags map a single style to the *entire* paragraph. They must contain **pure text and variables only**. If you need mixed formatting, use `<p>` instead.
 
 **Rich Paragraph Tag (Can Contain Inline Tags):**
-
-| Tag | Attributes | Description |
-|-----|------------|-------------|
-| `<p>` | `align`, `size` / `font-size`, `color` | Rich paragraph (default left align) |
-| `<p align=center>` | `size` / `font-size`, `color` | Rich paragraph centered |
-| `<p align=right>` | `size` / `font-size`, `color` | Rich paragraph right |
-| `<p align=justify>` | `size` / `font-size`, `color` | Rich paragraph justified |
-| `<br>` | — | Line break |
-
-**Rich paragraphs can contain inline tags:**
 
 ```
 <p align=center>Centered with <u>underline</u> and <b>bold</b></p>
 <p>Normal <set:b|i>bold italic</set:b|i> text</p>
-<p align=center font-size=16 color=#2b5797>Centered with color and size</p>
+<p align=justify size=16 color=#2b5797>Justified, sized, and colored</p>
+<br> 
 ```
 
-**Guideline:** Use `<w:*>` for pure text. Use `<p align=*>` when paragraph has mixed formatting (normal + bold + italic, etc.).
+**Supported Attributes:**
 
-> Note: In markdown tables above, `|` appears as `\|` due to markdown escaping. Actual DCD syntax uses plain `|` without backslash.
+* **`align`:** `left` (default), `center`, `right`, `justify`.
+* **`size` / `font-size`:** Text size in pt (both terms work interchangeably).
+* **`color`:** Hex code (e.g., `#2b5797`) or named color (e.g., `red`).
 
-> `size` and `font-size` are synonyms — either works, value in pt (points). `color` accepts hex (`#ff0000`) or named colors (`red`). Available on `<w:*>`, `<p>`, `<li>`, `<col>`.
+**Usage Guidelines:**
 
-### Inline Tags (inside `<p>`, `<li>`, `<col>`)
+* **Inline Tags:** `<p>` fully supports nested inline tags (`<b>`, `<u>`, `<set:b|i>`, etc.). 
+* **Syntax Note:** Use a plain `|` for combined sets (e.g., `<set:b|i>`), no backslash needed.
+* **Best Practice:** Use `<p>` for mixed formatting; use `<w:*>` wrappers for pure, unformatted text.
 
-| Tag | Description |
-|-----|-------------|
-| `<b>...</b>` | Bold |
-| `<i>...</i>` | Italic |
-| `<u>...</u>` | Underline |
-| `<code>...</code>` | Monospace |
-| `<set:b\|i>...</set>` | Combined inline formatting (`b`, `i`, `u`, `code`) |
-| `<tab>` / `<tab size=N>` | Tab character, optional N-space width |
+### Inline Tags (for `<p>`, `<li>`, `<col>`)
 
-> Note: Actual DCD syntax uses plain `|` without backslash (e.g., `<set:b|i>`).
+* `<b>`, `<i>`, `<u>`, `<code>`
+* `<set:b|i>`: Combined formatting (use plain `|`, no backslash).
+* `<tab>` / `<tab size=N>`: Tab character.
 
-### Tag Nesting Rules
+### Nesting Rules
 
-**Allowed:**
-- `<p>` and `<p align=*>` can contain: `<b>`, `<i>`, `<u>`, `<code>`, `<set:>`, `<tab>`, `<a>`, `{{...}}`
-- `<li>` can contain: same as `<p>`
-- `<col>` can contain: same as `<p>`
-- `<loop>` variants can contain: any body tags
+* **Allowed:** `<p>`, `<li>`, and `<col>` accept inline tags, `<a>`, and `{{vars}}`. `<loop>` accepts any body tag.
+* **Forbidden:**
+* `<w:*>` wrappers must contain **text/variables only** (no tags).
+* `<pb>`, `<page-break>`, and `<hr>` must be **standalone** (never inside text blocks). Split paragraphs around page breaks.
 
-**Forbidden:**
-- `<w:*>` wrapper tags (e.g., `<w:c>`, `<w:r>`, `<w:b>`) CANNOT contain any tags — pure text + variables only
-- `<pb>`, `<page-break>`, `<hr>` MUST be standalone — NOT inside `<p>`, `<li>`, `<col>`, or `<w:*>`
+
 
 **Examples:**
 
-Valid:
-```
-<w:c>Center text {{var}}</w:c>
-<p align=center>Center with <b>bold</b> and <u>underline</u></p>
-<pb>
-<p>New page text</p>
-```
+```html
+<!-- VALID -->
+<w:c>Pure text and {{var}}</w:c>
+<p align=center>Text with <b>bold</b></p>
+<p>Before break</p><pb><p>After break</p>
 
-Invalid:
-```
-<w:c>Text <u>underlined</u></w:c>         <!-- WRONG: tag inside wrapper -->
-<p><pb/>Text after break</p>              <!-- WRONG: pb inside p -->
-<p align=center><w:c>Nested</w:c></p>     <!-- WRONG: wrapper inside p -->
-```
+<!-- INVALID -->
+<w:c>No <u>tags</u> allowed</w:c>      <!-- Wrapper contains tag -->
+<p>Text <pb/> inside</p>               <!-- Break inside paragraph -->
 
-**Page Break Mid-Paragraph:**
-If source has page break in middle of paragraph text, split into two paragraphs:
 ```
-<p>Text before break</p>
-<pb>
-<p>Text after break</p>
-```
-
----
 
 ## 3. Headings
 
-```
-[style:heading-1]
+```ini
+[style:heading-1] # (Configurable for heading-1 through heading-6)
 font-family="Arial"
-font-size=24                 # in pt
+font-size=24        # in pt
 color=#2b5797
 bold=true
-space-before=18              # in pt
-space-after=12               # in pt
+space-before=18     # in pt
+space-after=12      # in pt
 border-bottom=1pt
+
 ```
 
-| Property | Description |
-|----------|-------------|
-| `font-family` | Heading font |
-| `font-size` | Size in pt |
-| `color` | Text color |
-| `bold`, `italic`, `underline` | `true`/`false` |
-| `align` | `left`, `center`, `right` |
-| `space-before`, `space-after` | Spacing in pt |
-| `border-bottom` | Bottom border line (e.g., `1pt`) |
+**Supported Properties:**
 
-Body: `<h1>`–`<h6>` with local override: `<h1 color=red font-size=28>`. Precedence: local attr → `[style:heading-N]` → `[style]`.
+* **Styling:** `font-family`, `font-size` (pt), `color`.
+* **Formatting (`true`/`false`):** `bold`, `italic`, `underline`.
+* **Layout:** `align` (`left`, `center`, `right`), `space-before` / `space-after` (pt), `border-bottom` (e.g., `1pt`).
+
+**Usage & Precedence:**
+
+* **Body Tags:** Use `<h1>`–`<h6>` in your document.
+* **Override Order:** Local attribute (e.g., `<h1 color=red>`) → `[style:heading-N]` → base `[style]`.
 
 ---
 
-## 4. Tables
-
-```
-<table border=1 width=100%>
-  <row bg=#f0f0f0 style=header>
-    <col align=center width=30%>Name</col>
-    <col align=center>City</col>
-  </row>
-  <loop:row x from entries>
-    <col>{{x.name}}</col>
-    <col>{{x.city}}</col>
-  </loop:row>
-</table>
-```
-
-| Tag | Description |
-|-----|-------------|
-| `<table>...</table>` | Table wrapper; properties: `border`, `width` |
-| `<row>...</row>` | Row; properties: `bg`, `style` (named table-style) |
-| `<col>...</col>` | Cell; properties: `align`, `width`, `bg`, `colspan`, `rowspan` |
-| `<loop:row x from var>` | Loop data into rows; property: `style.first=name` (applies style `name` to first row only) |
-
-Named table style example:
-
-```
-[style:table header]
-bg=#f0f0f0
-color=#000000
-font-weight=bold
-align=center
-border-bottom=1pt
-```
-
-Dynamic style: `<row style={{myStyle}}>` where `{{myStyle}}` is a variable from section var/keys containing a style name.
-
----
-
-## 5. Lists
+## 4. Lists
 
 ```
 <ul>
@@ -307,7 +218,7 @@ Dynamic style: `<row style={{myStyle}}>` where `{{myStyle}}` is a variable from 
 
 Tags: `<ol>`, `<ul>`, `<li>`.
 
-Horizontal rule: `<hr>` with optional `width`, `color`, `thickness`.
+Horizontal rule: `<hr>`.
 
 ```
 <hr width=50% color=#cccccc thickness=2pt>
@@ -315,7 +226,7 @@ Horizontal rule: `<hr>` with optional `width`, `color`, `thickness`.
 
 ---
 
-## 6. Loops
+## 5. Loops
 
 ```
 <loop x from entries>        # basic
@@ -332,35 +243,28 @@ Horizontal rule: `<hr>` with optional `width`, `color`, `thickness`.
 </loop:row>
 ```
 
-All loop variants: `<loop>`, `<loop:ol>`, `<loop:ul>`, `<loop:row>`. Closing tag must match opening variant. `x` = loop variable alias, source must be listed in `var` (2nd+ position). Fields accessed as `{{x.field}}`.
+All loop variants: `<loop>`, `<loop:ol>`, `<loop:ul>`, `<loop:row>`. Closing tag must match opening variant. `x` = loop variable alias, source must be listed in `var`. Fields accessed as `{{x.field}}`.
 
 ---
 
-## 7. Images
+## 6. Images
 
 ```
-<img={{source.img}} width=80% align=center>     # from data
 <img=./assets/photo.jpg width=400>               # static path
 ```
 
-Properties: `width`, `height`, `align` (left/center/right), `alt`, `border`, `bg` (background color for image container).
-
 ---
 
-## 8. Links
+## 7. Links
 
 ```
-<a={{source.url}}>{{source.label}}</a>           # from data
 <a=https://example.com>visit</a>                  # static
-<a=#chapter1>see Chapter 1</a>                    # bookmark
 <p>click <a={{url}} target=_blank>here</a></p>    # inline
 ```
 
-Properties: `target` (`_blank`), `color`, `underline` (`true`/`false`).
-
 ---
 
-## 9. Page & Section Breaks
+## 8. Page & Section Breaks
 
 | Tag / Syntax | Description |
 |---|---|
@@ -369,27 +273,21 @@ Properties: `target` (`_blank`), `color`, `underline` (`true`/`false`).
 
 ---
 
-## 10. Metadata
+## 9. Metadata
 
 ```
 [title]
-title=Document Title
-subject=Document Subject
-author=Author Name
+title=    # Document title (accessible as {{title}})
+subject=  # Document description (accessible as {{subject}})
+author=   # Document creator (accessible as {{author}})
 ```
-
-| Property | Description |
-|----------|-------------|
-| `title` | Document title (accessible as `{{title}}`) |
-| `subject` | Document description (accessible as `{{subject}}`) |
-| `author` | Document creator (accessible as `{{author}}`) |
 
 ---
 
-## 11. Header & Footer
+## 10. Header & Footer
 
 ```
-[header]
+[header] # (Same properties apply to [footer])
 left={{title}}
 right={{page}} / {{total}}
 font-size=10
@@ -398,49 +296,40 @@ border=bottom
 margin=0.3
 first-page=true
 
-[footer]
-center={{date}}
-font-size=9
-border=top
-margin=0.2
-first-page=false
 ```
 
-| Property | Description |
-|----------|-------------|
-| `left`, `center`, `right` | Column content |
-| `justify_between` | 2-3 comma-separated items spread via tab stops (use `\,` for literal comma). 2 items = left+right, 3 items = left+center+right. Examples: `justify_between={{company}}, {{date}}` or `justify_between=Acme\, Inc., {{title}}, {{date}}` |
-| `font-family`, `font-size`, `color` | Font override |
-| `border` | `top`, `bottom`, `none` |
-| `margin` | Distance to content |
-| `first-page` | `true`/`false` — show on page 1 |
-| `mirror` | `true`/`false` — swap left↔right (for odd/even pages in duplex) |
+**Supported Properties:**
+
+* **Content Placement:** `left`, `center`, `right`.
+* **`justify_between`:** Spreads 2 or 3 comma-separated items (e.g., `left,right` or `left,center,right`). Use `\,` for literal commas.
+* **Styling:** `font-family`, `font-size`, `color`.
+* **Layout:** `border` (`top`, `bottom`, `none`) and `margin` (distance to content).
+* **Toggles (`true`/`false`):**
+* `first-page`: Show on page 1.
+* `mirror`: Swap left↔right for double-sided printing.
 
 ### Unpredictable Objects & Keys
 
-Objects/keys whose count/structure cannot be known from the source document alone (e.g. dynamic form fields, repeated signatures, variable-numbered annexes).
+Use for dynamic structures where counts or fields are unknown at design time (e.g., variable-numbered annexes, dynamic form fields, repeated signatures).
 
-**Syntax:**
-
-```
+```ini
 [object-unpredictable]
-signatures=signer_name, position, date          ← single object
-items=[]name, qty, price                         ← array of objects
+signatures=signer_name, position, date  # Single object mapping
+items=[]name, qty, price                # Array of objects (prefix with [])
 
 [keys-unpredictable]
-signer_name, position, date
+signer_name, position, date             # Flat list of unpredictable keys
+
 ```
 
-**Rules:**
-- `[object-unpredictable]` declares objects/arrays whose keys are not known ahead. Use `name=field, field` for single object, `name=[]field, field` for array of objects.
-- `[keys-unpredictable]` declares flat key mappings across sections.
-- Both are required in DCD output when the source document contains such variability.
+**Key Rules:**
 
-### Variables
+* **`[object-unpredictable]`**: Declares dynamic objects. Use `name=keys` for a single object, or `name=[]keys` for an array.
+* **`[keys-unpredictable]`**: Declares the flat key mappings used across the document sections.
+* **Requirement:** Both blocks are **mandatory** in the DCD output if the source document contains dynamic, unpredictable elements.
 
-| Variable | Description |
-|----------|-------------|
-| `{{page}}` | Page number |
-| `{{total}}` | Total pages |
-| `{{title}}` | Document title |
-| `{{date}}` | Compilation date |
+### Built-in Variables
+
+* **`{{page}}` / `{{total}}`:** Current page / total pages.
+* **`{{title}}`:** Document title.
+* **`{{date}}`:** Compilation date.

@@ -198,65 +198,119 @@ func isLoopVarInSection(v string, sections []sectionInfo) bool {
 	return false
 }
 
-// checkUnpredictableOverlap validates that [object-unpredictable] and [keys-unpredictable]
-// do not redeclare any variable name, key, or field that is already declared in predictableKeys.
-// Returns (true, "") if clean, or (false, reason) on first overlap found.
-func checkUnpredictableOverlap(dcd string, predictableKeys []KeyDef) (bool, string) {
+// fixUnpredictableOverlap removes predicted names from [object-unpredictable] and
+// [keys-unpredictable] sections. Object names matching predicted VarObject/VarArray names
+// are removed. Key entries matching predicted names are removed. Field-level checks are
+// NOT performed (fields like "nama" are scoped to their object and may repeat across objects).
+func fixUnpredictableOverlap(dcd string, predictableKeys []KeyDef) string {
 	if len(predictableKeys) == 0 {
-		return true, ""
+		return dcd
 	}
 
-	// Collect all predicted names and fields
 	predictedNames := map[string]bool{}
-	predictedFields := map[string]bool{}
 	for _, k := range predictableKeys {
 		switch k.Type {
 		case VarObject, VarArray:
 			predictedNames[k.Name] = true
-			if k.FieldDefs != nil {
-				for _, f := range k.FieldDefs {
-					predictedFields[f.Name] = true
-				}
-			} else {
-				for _, f := range k.Fields {
-					predictedFields[f] = true
-				}
-			}
 		case VarKeys:
 			if k.FieldDefs != nil {
 				for _, f := range k.FieldDefs {
 					predictedNames[f.Name] = true
-					predictedFields[f.Name] = true
 				}
 			} else {
 				for _, f := range k.Fields {
 					predictedNames[f] = true
-					predictedFields[f] = true
 				}
 			}
 		}
 	}
 
-	// Check [object-unpredictable] — object names and their fields
-	for _, obj := range parseUnpredictableObjects(dcd) {
-		if predictedNames[obj.Name] {
-			return false, fmt.Sprintf("unpredictable object %q redeclares predicted variable %q", obj.Name, obj.Name)
+	result := dcd
+
+	// Fix [object-unpredictable] — remove object lines whose name is predicted
+	if objStart := strings.Index(result, "[object-unpredictable]"); objStart >= 0 {
+		rest := result[objStart:]
+		endIdx := strings.Index(rest, "\n[")
+		if endIdx < 0 {
+			endIdx = len(rest)
 		}
-		for _, f := range obj.Fields {
-			if predictedFields[f] {
-				return false, fmt.Sprintf("unpredictable field %q in object %q redeclares predicted field", f, obj.Name)
+		section := rest[:endIdx]
+
+		var newSection strings.Builder
+		newSection.WriteString("[object-unpredictable]\n")
+		origLen := len("[object-unpredictable]\n")
+
+		hasContent := false
+		for _, line := range strings.Split(section[origLen:], "\n") {
+			trim := strings.TrimSpace(line)
+			if trim == "" {
+				continue
+			}
+			m := reObjectLine.FindStringSubmatch(trim)
+			if m != nil && predictedNames[m[1]] {
+				continue
+			}
+			newSection.WriteString(line + "\n")
+			hasContent = true
+		}
+
+		if !hasContent {
+			result = result[:objStart] + strings.TrimPrefix(rest[endIdx:], "\n")
+		} else {
+			result = result[:objStart] + newSection.String() + rest[endIdx:]
+		}
+	}
+
+	// Fix [keys-unpredictable] — remove key entries matching predicted names
+	if keysStart := strings.Index(result, "[keys-unpredictable]"); keysStart >= 0 {
+		rest := result[keysStart:]
+		endIdx := strings.Index(rest, "\n\n")
+		if endIdx < 0 {
+			endIdx = len(rest)
+		} else {
+			endIdx += 2 // include the blank line
+		}
+		section := rest[:endIdx]
+
+		var newSection strings.Builder
+		newSection.WriteString("[keys-unpredictable]\n")
+		origLen := len("[keys-unpredictable]\n")
+
+		hasContent := false
+		for _, line := range strings.Split(section[origLen:], "\n") {
+			trim := strings.TrimSpace(line)
+			if trim == "" {
+				continue
+			}
+			keyLine := trim
+			hasDash := strings.HasPrefix(keyLine, "- ")
+			if hasDash {
+				keyLine = strings.TrimPrefix(keyLine, "- ")
+			}
+			kept := make([]string, 0, len(keyLine)/2)
+			for _, k := range splitFields(keyLine) {
+				if !predictedNames[k] {
+					kept = append(kept, k)
+				}
+			}
+			if len(kept) > 0 {
+				if hasDash {
+					newSection.WriteString("- " + strings.Join(kept, ", ") + "\n")
+				} else {
+					newSection.WriteString(strings.Join(kept, ", ") + "\n")
+				}
+				hasContent = true
 			}
 		}
-	}
 
-	// Check [keys-unpredictable] — flat key entries
-	for _, k := range parseUnpredictableKeys(dcd) {
-		if predictedNames[k] || predictedFields[k] {
-			return false, fmt.Sprintf("unpredictable key %q redeclares predicted variable", k)
+		if !hasContent {
+			result = result[:keysStart] + strings.TrimPrefix(rest[endIdx:], "\n")
+		} else {
+			result = result[:keysStart] + newSection.String() + rest[endIdx:]
 		}
 	}
 
-	return true, ""
+	return result
 }
 
 func contains(list []string, s string) bool {

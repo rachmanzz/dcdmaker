@@ -1177,20 +1177,20 @@ func TestFixLoopSyntax(t *testing.T) {
 	}
 }
 
-func TestCheckUnpredictableOverlap_NoPredictedKeys(t *testing.T) {
+func TestFixUnpredictableOverlap_NoPredictedKeys(t *testing.T) {
 	dcd := `[object-unpredictable]
 info=nama, alamat
 
 [keys-unpredictable]
 nama, alamat
 `
-	ok, reason := checkUnpredictableOverlap(dcd, nil)
-	if !ok {
-		t.Fatalf("expected valid when no predictable keys, got: %s", reason)
+	got := fixUnpredictableOverlap(dcd, nil)
+	if got != dcd {
+		t.Fatalf("expected unchanged when no predictable keys, got:\n%s", got)
 	}
 }
 
-func TestCheckUnpredictableOverlap_ObjectNameCollision(t *testing.T) {
+func TestFixUnpredictableOverlap_ObjectNameCollision(t *testing.T) {
 	dcd := `[section 0]
 name=test
 var=info
@@ -1201,35 +1201,49 @@ keys=nama, alamat
 
 [object-unpredictable]
 info=nama, alamat
+
+[keys-unpredictable]
+extra_key
+`
+	want := `[section 0]
+name=test
+var=info
+keys=nama, alamat
+
+--- BODY ---
+<p>{{info.nama}} {{info.alamat}}</p>
+
+[keys-unpredictable]
+extra_key
 `
 	pred := []KeyDef{Object("info", "nama", "alamat")}
-	ok, reason := checkUnpredictableOverlap(dcd, pred)
-	if ok {
-		t.Fatal("expected invalid: unpredictable object redeclares predicted object name")
-	}
-	if !strings.Contains(reason, "info") {
-		t.Fatalf("reason should mention 'info', got: %s", reason)
+	got := fixUnpredictableOverlap(dcd, pred)
+	if got != want {
+		t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 	}
 }
 
-func TestCheckUnpredictableOverlap_FlatKeyCollision(t *testing.T) {
+func TestFixUnpredictableOverlap_FlatKeyCollision(t *testing.T) {
 	dcd := `[object-unpredictable]
 items=[]name, qty
 
 [keys-unpredictable]
 bidang_usaha, nomor_surat_saham
 `
-	pred := []KeyDef{Keys("bidang_usaha", "nomor_surat_saham")}
-	ok, reason := checkUnpredictableOverlap(dcd, pred)
-	if ok {
-		t.Fatal("expected invalid: unpredictable key redeclares predicted key")
-	}
-	if !strings.Contains(reason, "bidang_usaha") {
-		t.Fatalf("reason should mention 'bidang_usaha', got: %s", reason)
+	want := `[object-unpredictable]
+items=[]name, qty
+
+[keys-unpredictable]
+nomor_surat_saham
+`
+	pred := []KeyDef{Keys("bidang_usaha")}
+	got := fixUnpredictableOverlap(dcd, pred)
+	if got != want {
+		t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 	}
 }
 
-func TestCheckUnpredictableOverlap_FieldCollision(t *testing.T) {
+func TestFixUnpredictableOverlap_FieldCollision(t *testing.T) {
 	dcd := `[section 0]
 name=test
 var=info
@@ -1241,17 +1255,16 @@ keys=nama, alamat
 [keys-unpredictable]
 nama, extra_field
 `
+	// "nama" is a predicted field of object "info", not a global name — should NOT be removed
+	want := dcd
 	pred := []KeyDef{Object("info", "nama", "alamat")}
-	ok, reason := checkUnpredictableOverlap(dcd, pred)
-	if ok {
-		t.Fatal("expected invalid: unpredictable key redeclares predicted field 'nama'")
-	}
-	if !strings.Contains(reason, "nama") {
-		t.Fatalf("reason should mention 'nama', got: %s", reason)
+	got := fixUnpredictableOverlap(dcd, pred)
+	if got != want {
+		t.Fatalf("expected unchanged (field-level not checked), got:\n%s", got)
 	}
 }
 
-func TestCheckUnpredictableOverlap_FieldInObjectCollision(t *testing.T) {
+func TestFixUnpredictableOverlap_FieldInObjectCollision(t *testing.T) {
 	dcd := `[section 0]
 name=test
 var=info
@@ -1263,17 +1276,16 @@ keys=nama, alamat
 [object-unpredictable]
 extra=alamat, phone
 `
+	// "alamat" is a predicted field of "info", not a global name — should NOT be removed
+	want := dcd
 	pred := []KeyDef{Object("info", "nama", "alamat")}
-	ok, reason := checkUnpredictableOverlap(dcd, pred)
-	if ok {
-		t.Fatal("expected invalid: unpredictable object field 'alamat' redeclares predicted field")
-	}
-	if !strings.Contains(reason, "alamat") {
-		t.Fatalf("reason should mention 'alamat', got: %s", reason)
+	got := fixUnpredictableOverlap(dcd, pred)
+	if got != want {
+		t.Fatalf("expected unchanged (field-level not checked), got:\n%s", got)
 	}
 }
 
-func TestCheckUnpredictableOverlap_NoCollision(t *testing.T) {
+func TestFixUnpredictableOverlap_NoCollision(t *testing.T) {
 	dcd := `[section 0]
 name=test
 var=info
@@ -1288,23 +1300,24 @@ pendiri=[]nama_pendiri, tgl_lahir
 [keys-unpredictable]
 bidang_usaha
 `
+	want := dcd
 	pred := []KeyDef{Object("info", "nama", "alamat")}
-	ok, reason := checkUnpredictableOverlap(dcd, pred)
-	if !ok {
-		t.Fatalf("expected valid, got: %s", reason)
+	got := fixUnpredictableOverlap(dcd, pred)
+	if got != want {
+		t.Fatalf("expected unchanged, got:\n%s", got)
 	}
 }
 
-func TestCheckUnpredictableOverlap_VarKeysEx(t *testing.T) {
+func TestFixUnpredictableOverlap_VarKeysEx(t *testing.T) {
 	dcd := `[keys-unpredictable]
 signer_name, position
 `
+	want := `[keys-unpredictable]
+position
+`
 	pred := []KeyDef{KeysEx(FieldDef{Name: "signer_name"})}
-	ok, reason := checkUnpredictableOverlap(dcd, pred)
-	if ok {
-		t.Fatal("expected invalid: unpredictable key redeclares predicted FieldDef key")
-	}
-	if !strings.Contains(reason, "signer_name") {
-		t.Fatalf("reason should mention 'signer_name', got: %s", reason)
+	got := fixUnpredictableOverlap(dcd, pred)
+	if got != want {
+		t.Fatalf("got:\n%s\n\nwant:\n%s", got, want)
 	}
 }

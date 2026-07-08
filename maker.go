@@ -219,6 +219,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 
 			result = resolveChunks(ctx, provider, result, m.maxRetries)
 			result = sanitizeDCD(result)
+			result = fixVarsAndKeys(result)
 
 			valid, reason := isDCDValid(result)
 			if valid {
@@ -239,7 +240,6 @@ func (m *Maker) generate(data []byte) (string, error) {
 					)
 					continue
 				}
-				result = fixVarsAndKeys(result)
 				m.lastProvider = provider.Name()
 				m.lastResult = result
 				return result, nil

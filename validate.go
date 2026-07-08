@@ -281,7 +281,6 @@ func fixVarsAndKeys(dcd string) string {
 
 	usedVars := map[string]bool{}
 	usedVarFields := map[string]map[string]bool{}
-	loopVars := map[string]bool{}
 
 	for _, u := range usages {
 		usedVars[u.Var] = true
@@ -291,40 +290,26 @@ func fixVarsAndKeys(dcd string) string {
 			}
 			usedVarFields[u.Var][u.Field] = true
 		}
-		if u.IsLoop {
-			loopVars[u.Var] = true
-		}
 	}
 
-	var addVars []string
-	var addKeys []string
-
+	addVars := map[string]bool{}
 	for v := range usedVars {
 		if !declaredVars[v] {
-			addVars = append(addVars, v)
+			addVars[v] = true
 		}
 	}
 
-	var needsFix bool
-	if len(addVars) > 0 {
-		needsFix = true
-		usedFields := map[string]bool{}
-		for _, v := range addVars {
-			for f := range usedVarFields[v] {
-				usedFields[f] = true
-			}
-		}
-		for f := range usedFields {
-			addKeys = append(addKeys, f)
-		}
-	}
-
+	removeVars := map[string]bool{}
 	for _, s := range sections {
 		for _, v := range s.Vars {
 			if !usedVars[v] {
-				needsFix = true
+				removeVars[v] = true
 			}
 		}
+	}
+
+	removeKeys := map[string]bool{}
+	for _, s := range sections {
 		for _, k := range s.Keys {
 			found := false
 			for v := range usedVarFields {
@@ -334,48 +319,74 @@ func fixVarsAndKeys(dcd string) string {
 				}
 			}
 			if !found {
-				needsFix = true
+				removeKeys[k] = true
 			}
 		}
 	}
 
-	if !needsFix {
+	if len(addVars) == 0 && len(removeVars) == 0 && len(removeKeys) == 0 {
 		return dcd
 	}
 
 	lines := strings.Split(dcd, "\n")
-	var lastVarLineIdx, lastKeysLineIdx int
-	lastVarLineIdx = -1
-	lastKeysLineIdx = -1
+	var secName string
 
 	for i, line := range lines {
 		trim := strings.TrimSpace(line)
+
+		if reSectionHeader.MatchString(trim) {
+			secName = ""
+			continue
+		}
+		if strings.HasPrefix(trim, "name=") {
+			secName = strings.TrimPrefix(trim, "name=")
+			continue
+		}
+
 		if strings.HasPrefix(trim, "var=") {
-			lastVarLineIdx = i
+			existing := splitCSV(strings.TrimPrefix(trim, "var="))
+			var kept []string
+			for _, v := range existing {
+				if !removeVars[v] {
+					kept = append(kept, v)
+				}
+			}
+			for v := range addVars {
+				if !contains(kept, v) {
+					kept = append(kept, v)
+				}
+			}
+			lines[i] = "var=" + strings.Join(kept, ", ")
+			continue
 		}
+
 		if strings.HasPrefix(trim, "keys=") {
-			lastKeysLineIdx = i
-		}
-	}
-
-	if lastVarLineIdx >= 0 {
-		existingVars := splitCSV(strings.TrimPrefix(strings.TrimSpace(lines[lastVarLineIdx]), "var="))
-		for _, v := range addVars {
-			if !contains(existingVars, v) {
-				existingVars = append(existingVars, v)
+			existing := splitCSV(strings.TrimPrefix(trim, "keys="))
+			var keot []string
+			for _, k := range existing {
+				if !removeKeys[k] {
+					keot = append(keot, k)
+				}
 			}
-		}
-		lines[lastVarLineIdx] = "var=" + strings.Join(existingVars, ", ")
-	}
-
-	if lastKeysLineIdx >= 0 {
-		existingKeys := splitCSV(strings.TrimPrefix(strings.TrimSpace(lines[lastKeysLineIdx]), "keys="))
-		for _, k := range addKeys {
-			if !contains(existingKeys, k) {
-				existingKeys = append(existingKeys, k)
+			// Add missing fields from this section's vars
+			for _, s := range sections {
+				if s.Name == secName {
+					for _, v := range s.Vars {
+						if removeVars[v] {
+							continue
+						}
+						for f := range usedVarFields[v] {
+							if !contains(keot, f) {
+								keot = append(keot, f)
+							}
+						}
+					}
+					break
+				}
 			}
+			lines[i] = "keys=" + strings.Join(keot, ", ")
+			continue
 		}
-		lines[lastKeysLineIdx] = "keys=" + strings.Join(existingKeys, ", ")
 	}
 
 	return strings.Join(lines, "\n")

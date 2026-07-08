@@ -1074,8 +1074,29 @@ keys=title
 }
 
 func TestFixVarsAndKeysRemovesUnused(t *testing.T) {
-	// Currently fixVarsAndKeys does not delete, only adds.
-	// This test verifies the function is a no-op for valid DCD.
+	dcd := `[section 0]
+name=test
+var=info, unused_var
+keys=title, unused_key
+
+--- BODY ---
+<p>{{info.title}}</p>
+`
+	want := `[section 0]
+name=test
+var=info
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+`
+	fixed := fixVarsAndKeys(dcd)
+	if fixed != want {
+		t.Fatalf("got:\n%s\n\nwant:\n%s", fixed, want)
+	}
+}
+
+func TestFixVarsAndKeysNoChangeForValid(t *testing.T) {
 	dcd := `[section 0]
 name=test
 var=info

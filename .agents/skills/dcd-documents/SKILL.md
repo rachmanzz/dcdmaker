@@ -27,25 +27,25 @@ The following rules are ABSOLUTE. Output violating these WILL be rejected:
 - Use tags, attributes, or syntax not explicitly listed in this specification
 - Use `:` for assignments — `=` is the only assignment operator (except `[field:format]`, `[style:heading-N]`, `<loop:ol>`, `<loop:ul>`)
 
-### ❌ Contoh Violasi — Jangan:
+### ❌ VIOLATION EXAMPLE — DO NOT:
 ```ini
 [section 0]
 var=bidang_usaha_utama, jumlah_anggota_dewan_komisaris
 
 [keys-unpredictable]
-bidang_usaha_utama, jumlah_anggota_dewan_komisaris ← SALAH! sudah di var=
+bidang_usaha_utama, jumlah_anggota_dewan_komisaris ← WRONG! already in var=
 ```
 
-### ❌ Contoh Violasi — Jangan:
+### ❌ VIOLATION EXAMPLE — DO NOT:
 ```ini
 [section 0]
 var=modal, jumlah_anggota_dewan_komisaris
 
 [object-unpredictable]
-pendiri=[]nama, bidang_usaha_utama           ← bidang_usaha_utama bukan punya pendiri
+pendiri=[]nama, bidang_usaha_utama           ← bidang_usaha_utama is not a field of pendiri
 
 [keys-unpredictable]
-bidang_usaha_utama, jumlah_anggota_dewan_komisaris ← SALAH! sudah di var=
+bidang_usaha_utama, jumlah_anggota_dewan_komisaris ← WRONG! already in var=
 ```
 
 ### ✅ DO:

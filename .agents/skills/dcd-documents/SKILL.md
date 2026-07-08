@@ -67,6 +67,8 @@ formats=[date_field:dd-MM-yyyy], [items.date_field:dd-MM-yyyy]
 * **Built-in Vars:** `{{page}}`, `{{total}}`, `{{title}}`, and `{{date}}` are auto-resolved and do not need declaration.
 * **Formatting:** Supports `dd`, `MM`, `yyyy`, `HH`, `mm`, `ss`, and numeric formatting (e.g., `[price:#,##0]`).
 * **Arrays/Loops:** Format array fields using their dotted schema path (e.g., `items.date_field`). The engine automatically matches nested loop variables (like `{{x.date_field}}`) by stripping the runtime array index.
+* **Strict Usage:** Every variable in `var=` and every key in `keys=` MUST be used at least once in `--- BODY ---`. Do NOT declare unused variables or keys.
+* **Strict Unpredictable:** `[object-unpredictable]` and `[keys-unpredictable]` MUST only contain variables actually used in the body. Do NOT redeclare variables already present in any `var=`.
 
 ### Section Splitting Guidelines
 

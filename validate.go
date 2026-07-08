@@ -18,7 +18,7 @@ var (
 	reSectionHeader = regexp.MustCompile(`^\[section\s+\d+\]`)
 	reVarField      = regexp.MustCompile(`\{\{(\w+)\.(\w+)\}\}`)
 	rePlainVar      = regexp.MustCompile(`\{\{(\w+)\}\}`)
-	reLoopFrom      = regexp.MustCompile(`<loop\s+\w+\s+from\s+(\w+)>`)
+	reLoopFrom      = regexp.MustCompile(`<loop(?::\w+)?(?:\s+\w+=\w+)*\s+\w+\s+from\s+(\w+)>`)
 )
 
 func parseSections(dcd string) []sectionInfo {

@@ -2,15 +2,22 @@ package dcdmaker
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 )
+
+var reWrongLoop = regexp.MustCompile(`<(ol|ul)\s+\w+\s+from\s+`)
 
 func isDCDValid(dcd string) (bool, string) {
 	dcd = strings.TrimSpace(dcd)
 
 	if len(dcd) == 0 {
 		return false, "empty output"
+	}
+
+	if m := reWrongLoop.FindString(dcd); m != "" {
+		return false, fmt.Sprintf("use <loop:ol> or <loop:ul> instead of plain tag: found %q", m)
 	}
 
 	hasSection := strings.Contains(dcd, "[section")
@@ -38,6 +45,25 @@ func isDCDValid(dcd string) (bool, string) {
 	closeCurl := strings.Count(dcd, "}}")
 	if openCurl != closeCurl {
 		return false, fmt.Sprintf("unbalanced {{ }}: %d open, %d close", openCurl, closeCurl)
+	}
+
+	sections := parseSections(dcd)
+	usages := scanBody(dcd)
+
+	usedVars := map[string]bool{}
+	for _, u := range usages {
+		usedVars[u.Var] = true
+	}
+
+	for _, s := range sections {
+		if s.Name == "" {
+			continue
+		}
+		for _, v := range s.Vars {
+			if !usedVars[v] {
+				return false, fmt.Sprintf("section %q declares var %q but never uses it", s.Name, v)
+			}
+		}
 	}
 
 	return true, ""

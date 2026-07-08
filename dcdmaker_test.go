@@ -113,7 +113,7 @@ func TestIsDCDValid(t *testing.T) {
 		},
 		{
 			name:  "balanced loop",
-			dcd:   "[section 0]\nname=test\nvar=info, items\nkeys=title\n\n--- BODY ---\n<loop x from items>\n<p>{{x.name}}</p>\n</loop>",
+			dcd:   "[section 0]\nname=test\nvar=items\nkeys=title\n\n--- BODY ---\n<loop x from items>\n<p>{{x.name}}</p>\n</loop>",
 			valid: true,
 		},
 		{
@@ -133,13 +133,33 @@ func TestIsDCDValid(t *testing.T) {
 		},
 		{
 			name:  "loop:ol with type attribute",
-			dcd:   "[section 0]\nname=test\nvar=info, items\nkeys=title\n\n--- BODY ---\n<loop:ol type=a x from items>\n<li>{{x.name}}</li>\n</loop:ol>",
+			dcd:   "[section 0]\nname=test\nvar=items\nkeys=title\n\n--- BODY ---\n<loop:ol type=a x from items>\n<li>{{x.name}}</li>\n</loop:ol>",
 			valid: true,
 		},
 		{
 			name:  "unbalanced ol with type",
 			dcd:   "[section 0]\nname=test\nvar=info\nkeys=title\n\n--- BODY ---\n<ol type=a>\n<li>{{info.title}}</li>",
 			valid: false,
+		},
+		{
+			name:  "wrong loop syntax ol x from",
+			dcd:   "[section 0]\nname=test\nvar=items\nkeys=title\n\n--- BODY ---\n<ol x from items>\n<li>{{x.name}}</li>\n</ol>",
+			valid: false,
+		},
+		{
+			name:  "wrong loop syntax ul x from",
+			dcd:   "[section 0]\nname=test\nvar=items\nkeys=title\n\n--- BODY ---\n<ul x from items>\n<li>{{x.name}}</li>\n</ul>",
+			valid: false,
+		},
+		{
+			name:  "unused var declaration",
+			dcd:   "[section 0]\nname=test\nvar=info\nkeys=title\n\n--- BODY ---\n<p>static text only</p>",
+			valid: false,
+		},
+		{
+			name:  "used var across sections",
+			dcd:   "[section 0]\nname=header\nvar=info\n\n--- BODY ---\n<p>{{info.title}}</p>\n\n[section 1]\nname=items\nvar=info, items\n\n--- BODY ---\n<loop x from items>\n<p>{{x.name}}</p>\n</loop>",
+			valid: true,
 		},
 	}
 

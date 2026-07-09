@@ -668,7 +668,7 @@ func TestBuildPromptWithFieldDefs(t *testing.T) {
 	if !strings.Contains(prompt, "info {invoice_no: string, date: date-str (DD-MM-YYYY)}") {
 		t.Errorf("prompt missing ObjectEx with types:\n%s", prompt)
 	}
-	if !strings.Contains(prompt, "items []name: string, qty: number, unit_price: number") {
+	if !strings.Contains(prompt, "[]items {name: string, qty: number, unit_price: number} (array)") {
 		t.Errorf("prompt missing ArrayEx with types:\n%s", prompt)
 	}
 	if !strings.Contains(prompt, "po_number, department (keys)") {

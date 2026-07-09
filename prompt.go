@@ -20,15 +20,14 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("\n\n")
 
 	if len(predictableKeys) > 0 {
-		b.WriteString("=== PREDICTED VARIABLES ===\n")
-		b.WriteString("Only declare variables that are actually used in --- BODY ---. Do NOT over-declare.\n\n")
+		b.WriteString("=== PREDICTED VARIABLES ===\n\n")
 		for _, k := range predictableKeys {
 			switch k.Type {
 			case VarArray:
 				if k.FieldDefs != nil {
-					b.WriteString(fmt.Sprintf("  %s []%s (array — for <loop>)\n", k.Name, renderFieldDefs(k.FieldDefs)))
+					b.WriteString(fmt.Sprintf("  []%s {%s} (array)\n", k.Name, renderFieldDefs(k.FieldDefs)))
 				} else {
-					b.WriteString(fmt.Sprintf("  %s []%s (array — for <loop>)\n", k.Name, strings.Join(k.Fields, ", ")))
+					b.WriteString(fmt.Sprintf("  []%s {%s} (array)\n", k.Name, strings.Join(k.Fields, ", ")))
 				}
 			case VarObject:
 				if k.FieldDefs != nil {
@@ -75,15 +74,13 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- Every <w:t> text must be preserved in correct order.\n")
 	b.WriteString("- CRITICAL: Do NOT skip transitional clauses, introductory phrases, exception clauses, or connecting text between sections. Pay EXTRA attention to the FINAL paragraphs — AI models commonly truncate near the end. Every sentence must map to DCD.\n")
 	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context (e.g. dots near \"Nama\" → {{name}}). Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n")
-	b.WriteString("- CRITICAL: Each section's `var=` must ONLY contain variables/arrays actually referenced in that section's --- BODY ---. Do NOT copy all predicted variables into every section.\n")
+	b.WriteString("- CRITICAL: Do NOT copy all predicted variables into every section. Distribute them based on actual usage per section.\n")
 	b.WriteString("- CRITICAL: Loop aliases (e.g., `x` in `<loop x from items>`) are local to the loop body. Do NOT list them in `var=`.\n")
-	b.WriteString("- CRITICAL: The array source used in `<loop>` or `<loop:ol>` MUST appear with `[]` prefix in the same section's `var=`. E.g., `<loop:ol x from items>` requires `var=[]items`.\n")
+
 	b.WriteString("- CRITICAL: `type=N` in `<loop:ol>` controls the numbering style ONLY (a, A, 1, i, I). It does NOT select, filter, or group items. Looping the same source multiple times with different `type=` values renders ALL items each time — duplicates. Do NOT do this.\n")
 	b.WriteString("- CRITICAL: If the source document contains multiple distinct entries needing different formatting, use separate source arrays or separate sections. Do NOT merge distinct entries into one array then differentiate via `type=`.\n\n")
 
-	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")
-	b.WriteString("Only declare NEW variables/fields that are actually used in --- BODY ---. Do NOT declare unused fields.\n")
-	b.WriteString("Fields in [object-unpredictable] or [keys-unpredictable] MUST NOT also be declared in [section] var= — they are EITHER predictable OR unpredictable, never both.\n\n")
+
 	if len(predictableKeys) > 0 {
 		b.WriteString("CRITICAL: Variables listed in === PREDICTED VARIABLES === above are already declared. Do NOT redeclare them in [object-unpredictable] or [keys-unpredictable]. These sections are ONLY for NEW variables/fields NOT in the predicted list.\n\n")
 

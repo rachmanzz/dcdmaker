@@ -11,7 +11,7 @@ type UnpredictableObject struct {
 	IsArray bool
 }
 
-var reObjectLine = regexp.MustCompile(`^(?:\-\s)?(\w+)=(\[\]|)(.+)$`)
+var reObjectLine = regexp.MustCompile(`^(?:\-\s)?(\w+?)(\[\])?=(.+)$`)
 
 func parseUnpredictableObjects(dcd string) []UnpredictableObject {
 	section := extractSection(dcd, "[object-unpredictable]")

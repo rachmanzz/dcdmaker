@@ -75,25 +75,11 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- Parse the SOURCE DOCUMENT XML for actual margins (<w:pgMar>), fonts (<w:rFonts>, <w:sz>), headings (<w:pStyle>, <w:b/> combined with size), tables (<w:tbl>), lists (<w:numPr>).\n")
 	b.WriteString("- Match font-family, font-size, margins, page layout, heading hierarchy EXACTLY.\n")
 	b.WriteString("- Every <w:t> text must be preserved in correct order.\n")
-	b.WriteString("- Wrapper paragraph tags (<w:c>, <w:r>, <w:j>, <w:l>, <w:b>, <w:i>, <w:u>) contain ONLY pure text + variables. NO inline tags allowed. Use <w:*|flags> for combined properties (e.g., <w:c|b>, <w:r|i>). When paragraph has mixed formatting (normal + bold + italic), use rich paragraph <p align=center/right/justify> with inline tags instead.\n")
-	b.WriteString("- Rich paragraph tags (<p>, <p align=center/right/justify>) can contain inline tags (<b>, <i>, <u>, <set:>, <tab>). Use rich paragraphs when text has mixed formatting within same paragraph.\n")
-	b.WriteString("- Standalone tags (<pb>, <page-break>, <hr>) must NOT be nested inside <p>, <li>, <col>, or <w:*>. If source XML has page break mid-paragraph, split into two paragraphs with <pb> between them.\n")
-	b.WriteString("- Tab characters from <w:tab/> in source XML must map to <tab> or <tab size=N> inline tag.\n")
-	b.WriteString("- Table structure (<w:tbl>) must map to <table>/<row>/<col>.\n")
-	b.WriteString("- Lists (<w:numPr>) must map to <ol>/<ul>/<li>.\n")
-	b.WriteString("- Split sections by context/topic: [section 0] for header, [section 1] for parties, [section 2] for transaction, etc. Aim for ≤3 var and ≤15 keys per section (split if more needed). Use [section:next-page N] to start new section on new page.\n")
-	b.WriteString("- PREDICTED VARIABLES: use exact names as listed above — no changes. UNPREDICTABLE [keys-unpredictable] / [object-unpredictable]: infer names from document context (strong assumptions allowed, e.g. 'Invoice No:' → invoice_no).\n")
-	b.WriteString("- `<w:*>`, `<p>`, `<li>`, `<col>` support size/font-size and color attributes (see SKILL.md for details).\n")
-	b.WriteString("- Output ONLY raw DCD syntax, no markdown fences, no extra text.\n")
-	b.WriteString("- CRITICAL: Every variable listed in `var=` AND every key listed in `keys=` MUST be used in the --- BODY --- at least once. Do NOT declare unused variables or keys.\n")
-	b.WriteString("- CRITICAL: Every `{{var.field}}` in body MUST have `var` listed in `var=` and `field` listed in `keys=` of the same [section].\n")
-	b.WriteString("- CRITICAL: Every `<loop x from source>` in body MUST have `source` listed in `var=` of the same [section]. The fields accessed as `{{x.field}}` inside the loop MUST be listed in `keys=`.\n")
-	b.WriteString("- CRITICAL: If source contains recurring itemized details ending with total/summary, use `<loop>` for recurring items. The total/summary line MUST be a separate `{{var.field}}` — do NOT omit it.\n")
 	b.WriteString("- CRITICAL: Do NOT skip transitional clauses, introductory phrases, exception clauses, or connecting text between sections. Pay EXTRA attention to the FINAL paragraphs — AI models commonly truncate near the end. Every sentence must map to DCD.\n")
 	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context (e.g. dots near \"Nama\" → {{name}}). Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n\n")
 
 	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")
-	b.WriteString("You MUST include these sections. EVERY new variable/field introduced for itemized loops, dynamic placeholders, or unexpected content MUST be declared here. Do NOT leave these sections empty.\n\n")
+	b.WriteString("EVERY new variable/field introduced for itemized loops, dynamic placeholders, or unexpected content MUST be declared here.\n\n")
 	if len(predictableKeys) > 0 {
 		b.WriteString("CRITICAL: Variables listed in === PREDICTED VARIABLES === above are already declared. Do NOT redeclare them in [object-unpredictable] or [keys-unpredictable]. These sections are ONLY for NEW variables/fields NOT in the predicted list.\n\n")
 
@@ -122,15 +108,6 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 		}
 		b.WriteString("\n")
 	}
-	b.WriteString("=== CRITICAL: SECTION VARS ARE PREDICTABLE ===\n")
-	b.WriteString("Any variable you put in a section `var=` is a PREDICTABLE variable — it is already declared.\n")
-	b.WriteString("Do NOT also put those same variable names in `[keys-unpredictable]` or `[object-unpredictable]`.\n")
-	b.WriteString("A variable belongs in ONE place: either `var=` (predictable) OR unpredictable sections, never both.\n")
-	b.WriteString("Example: if `bidang_usaha_utama` is in a section `var=`, it MUST NOT appear in `[keys-unpredictable]`.\n\n")
-	b.WriteString("[object-unpredictable]\n")
-	b.WriteString("objectVarName=field1, field2, field3\n\n")
-	b.WriteString("[keys-unpredictable]\n")
-	b.WriteString("field1, field2, field3\n\n")
 
 	if strings.TrimSpace(userPrompt) != "" {
 		b.WriteString("=== USER INSTRUCTION ===\n")

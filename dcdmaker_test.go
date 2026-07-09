@@ -19,13 +19,13 @@ func TestNewMaker(t *testing.T) {
 func TestMakerChain(t *testing.T) {
 	m := NewMaker().
 		Source("test.docx").
-		OptionalPrompt("buat template invoice").
+		OptionalPrompt("create invoice template").
 		Resume(true)
 
 	if m.source != "test.docx" {
 		t.Fatalf("expected test.docx, got %s", m.source)
 	}
-	if m.userPrompt != "buat template invoice" {
+	if m.userPrompt != "create invoice template" {
 		t.Fatalf("unexpected prompt: %s", m.userPrompt)
 	}
 	if !m.resume {
@@ -822,7 +822,7 @@ keys=title
 <p>{{info.title}}</p>
 
 [object-unpredictable]
-- penjual=[]nama, identitas, alamat
+- penjual[]=nama, identitas, alamat
 - notaris=nama, sk, alamat
 
 [keys-unpredictable]
@@ -878,7 +878,7 @@ keys=title
 <p>{{info.title}}</p>
 
 [object-unpredictable]
-- user=[]name, email
+- user[]=name, email
 
 [keys-unpredictable]
 - title, author
@@ -905,7 +905,7 @@ keys=title
 
 [object-unpredictable]
 basic=jam_terbilang_akta, gelar_notaris
-pendiri=[]tanggal_lahir, alamat, kota
+pendiri[]=tanggal_lahir, alamat, kota
 
 [keys-unpredictable]
 field1, field2
@@ -930,7 +930,7 @@ field3, field4
 
 func TestUnpredictableParsingMixed(t *testing.T) {
 	dcd := `[object-unpredictable]
-- user=[]name, email
+- user[]=name, email
 guest=name, phone
 
 [keys-unpredictable]
@@ -1125,57 +1125,6 @@ func TestBuildPromptWithoutPredictableKeys(t *testing.T) {
 	}
 }
 
-func TestFixLoopSyntax(t *testing.T) {
-	tests := []struct {
-		name string
-		in   string
-		want string
-	}{
-		{
-			"basic ol loop",
-			"<ol x from items>\n  {{x.label}}\n</ol>",
-			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>",
-		},
-		{
-			"basic ul loop",
-			"<ul x from items>\n  {{x.label}}\n</ul>",
-			"<loop:ul x from items>\n  {{x.label}}\n</loop:ul>",
-		},
-		{
-			"ol loop with li inside (wrong content, but syntax fixed)",
-			"<ol x from items>\n  <li>{{x.label}}</li>\n</ol>",
-			"<loop:ol x from items>\n  <li>{{x.label}}</li>\n</loop:ol>",
-		},
-		{
-			"no wrong loops — unchanged",
-			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>",
-			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>",
-		},
-		{
-			"regular lists unchanged",
-			"<ol>\n  <li>item</li>\n</ol>\n<ul>\n  <li>item</li>\n</ul>",
-			"<ol>\n  <li>item</li>\n</ol>\n<ul>\n  <li>item</li>\n</ul>",
-		},
-		{
-			"mixed — loop fixed, list unchanged",
-			"<ol x from items>\n  {{x.label}}\n</ol>\n<ol>\n  <li>regular</li>\n</ol>",
-			"<loop:ol x from items>\n  {{x.label}}\n</loop:ol>\n<ol>\n  <li>regular</li>\n</ol>",
-		},
-		{
-			"multiple loops",
-			"<ol x from items>\n  {{x.name}}\n</ol>\n<ul x from extras>\n  {{x.desc}}\n</ul>",
-			"<loop:ol x from items>\n  {{x.name}}\n</loop:ol>\n<loop:ul x from extras>\n  {{x.desc}}\n</loop:ul>",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := fixLoopSyntax(tt.in)
-			if got != tt.want {
-				t.Errorf("got:\n%s\n\nwant:\n%s", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestFixUnpredictableOverlap_NoPredictedKeys(t *testing.T) {
 	dcd := `[object-unpredictable]
@@ -1225,13 +1174,13 @@ extra_key
 
 func TestFixUnpredictableOverlap_FlatKeyCollision(t *testing.T) {
 	dcd := `[object-unpredictable]
-items=[]name, qty
+	items[]=name, qty
 
 [keys-unpredictable]
-bidang_usaha, nomor_surat_saham
+	bidang_usaha, nomor_surat_saham
 `
 	want := `[object-unpredictable]
-items=[]name, qty
+	items[]=name, qty
 
 [keys-unpredictable]
 nomor_surat_saham
@@ -1295,7 +1244,7 @@ keys=nama, alamat
 <p>{{info.nama}} {{info.alamat}}</p>
 
 [object-unpredictable]
-pendiri=[]nama_pendiri, tgl_lahir
+	pendiri[]=nama_pendiri, tgl_lahir
 
 [keys-unpredictable]
 bidang_usaha

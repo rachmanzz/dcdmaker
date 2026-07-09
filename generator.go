@@ -130,57 +130,6 @@ func isIncomplete(dcd string) bool {
 	return false
 }
 
-var reWrongOpen = regexp.MustCompile(`<(ol|ul)\s+\w+\s+from\s+`)
-
-func fixLoopSyntax(dcd string) string {
-	var buf strings.Builder
-	buf.Grow(len(dcd) + 50)
-	lastEnd := 0
-
-	for {
-		loc := reWrongOpen.FindStringIndex(dcd[lastEnd:])
-		if loc == nil {
-			break
-		}
-		absStart := lastEnd + loc[0]
-		absEnd := lastEnd + loc[1]
-
-		tagType := dcd[absStart+1 : absStart+3]
-
-		gtIdx := strings.IndexByte(dcd[absEnd:], '>')
-		if gtIdx < 0 {
-			break
-		}
-		openTagEnd := absEnd + gtIdx + 1
-
-		buf.WriteString(dcd[lastEnd:absStart])
-		buf.WriteString("<loop:")
-		buf.WriteString(tagType)
-		buf.WriteString(dcd[absStart+3 : openTagEnd])
-
-		closeTag := "</" + tagType + ">"
-		closeIdx := strings.Index(dcd[openTagEnd:], closeTag)
-		if closeIdx >= 0 {
-			closePos := openTagEnd + closeIdx
-			buf.WriteString(dcd[openTagEnd:closePos])
-			buf.WriteString("</loop:")
-			buf.WriteString(tagType)
-			buf.WriteString(">")
-			lastEnd = closePos + len(closeTag)
-		} else {
-			buf.WriteString(dcd[openTagEnd:])
-			lastEnd = len(dcd)
-		}
-	}
-
-	if lastEnd > 0 {
-		buf.WriteString(dcd[lastEnd:])
-		return buf.String()
-	}
-
-	return dcd
-}
-
 func sanitizeDCD(dcd string) string {
 	dcd = strings.TrimSpace(dcd)
 
@@ -194,8 +143,6 @@ func sanitizeDCD(dcd string) string {
 			}
 		}
 	}
-
-	dcd = fixLoopSyntax(dcd)
 
 	return strings.TrimSpace(dcd)
 }

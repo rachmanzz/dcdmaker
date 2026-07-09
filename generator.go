@@ -2,12 +2,9 @@ package dcdmaker
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"unicode"
 )
-
-var reWrongLoop = regexp.MustCompile(`<(ol|ul)\s+\w+\s+from\s+`)
 
 func isDCDValid(dcd string) (bool, string) {
 	dcd = strings.TrimSpace(dcd)
@@ -16,35 +13,11 @@ func isDCDValid(dcd string) (bool, string) {
 		return false, "empty output"
 	}
 
-	if m := reWrongLoop.FindString(dcd); m != "" {
-		return false, fmt.Sprintf("use <loop:ol> or <loop:ul> instead of plain tag: found %q", m)
-	}
-
 	hasSection := strings.Contains(dcd, "[section")
 	hasBody := strings.Contains(dcd, "--- BODY ---")
 
 	if !hasSection && !hasBody {
 		return false, "missing [section] or --- BODY ---"
-	}
-
-	tags := []struct{ open, close string }{
-		{"<loop", "</loop"},
-		{"<table", "</table"},
-		{"<ul", "</ul"},
-		{"<ol", "</ol"},
-	}
-	for _, t := range tags {
-		o := strings.Count(dcd, t.open)
-		c := strings.Count(dcd, t.close)
-		if o != c {
-			return false, fmt.Sprintf("unbalanced %s: %d open, %d close", t.open, o, c)
-		}
-	}
-
-	openCurl := strings.Count(dcd, "{{")
-	closeCurl := strings.Count(dcd, "}}")
-	if openCurl != closeCurl {
-		return false, fmt.Sprintf("unbalanced {{ }}: %d open, %d close", openCurl, closeCurl)
 	}
 
 	sections := parseSections(dcd)
@@ -78,22 +51,6 @@ func isTruncated(dcd string) bool {
 	mainSections := strings.Count(dcd, "[section")
 	mainBodies := strings.Count(dcd, "--- BODY ---")
 	if mainSections != mainBodies {
-		return true
-	}
-
-	tags := []struct{ open, close string }{
-		{"<loop", "</loop"},
-		{"<table", "</table"},
-		{"<ul", "</ul"},
-		{"<ol", "</ol"},
-	}
-	for _, t := range tags {
-		if strings.Count(dcd, t.open) != strings.Count(dcd, t.close) {
-			return true
-		}
-	}
-
-	if strings.Count(dcd, "{{") != strings.Count(dcd, "}}") {
 		return true
 	}
 

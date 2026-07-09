@@ -218,9 +218,20 @@ func (m *Maker) generate(data []byte) (string, error) {
 			}
 
 			result = resolveChunks(ctx, provider, result, m.maxRetries)
+
+			if debug {
+				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: resolveChunks done (%d bytes), sanitizing...\n",
+					provider.Name(), attempt+1, len(result))
+			}
+
 			result = sanitizeDCD(result)
 			result = fixVarsAndKeys(result)
 			result = fixUnpredictableOverlap(result, m.predictableKeys)
+
+			if debug {
+				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validating...\n",
+					provider.Name(), attempt+1)
+			}
 
 			valid, reason := isDCDValid(result)
 			if valid {
@@ -235,6 +246,11 @@ func (m *Maker) generate(data []byte) (string, error) {
 					provider.Name(), attempt+1, reason)
 				sanPath := fmt.Sprintf("dcd_debug_%s_attempt_%d_sanitized.dcd", provider.Name(), attempt+1)
 				os.WriteFile(sanPath, []byte(result), 0644)
+			}
+
+			if debug {
+				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: invalid — %s. Retrying...\n",
+					provider.Name(), attempt+1, reason)
 			}
 
 			prompt = originalPrompt + fmt.Sprintf(
@@ -309,13 +325,24 @@ func (m *Maker) resumeSession(session *Session, output string) error {
 }
 
 func resolveChunks(ctx context.Context, provider Provider, result string, maxChunks int) string {
+	debug := os.Getenv("DCD_DEBUG") == "true"
 	var full strings.Builder
 	full.WriteString(result)
 
 	for range maxChunks {
 		dcd := full.String()
-		if !isTruncated(dcd) && !isIncomplete(dcd) {
+		trunc := isTruncated(dcd)
+		incomp := isIncomplete(dcd)
+		if !trunc && !incomp {
 			break
+		}
+
+		if debug {
+			n := dcd
+			if len(n) > 120 {
+				n = n[:120] + "..."
+			}
+			fmt.Fprintf(os.Stderr, "[dcd-debug] resolveChunks: truncated=%v incomplete=%v, requesting continuation...\n", trunc, incomp)
 		}
 
 		clean := strings.TrimSuffix(dcd, "\n\n<TRUNCATED/>")
@@ -323,7 +350,13 @@ func resolveChunks(ctx context.Context, provider Provider, result string, maxChu
 
 		chunk, err := provider.Generate(ctx, prompt)
 		if err != nil {
+			if debug {
+				fmt.Fprintf(os.Stderr, "[dcd-debug] resolveChunks: continuation failed: %v\n", err)
+			}
 			break
+		}
+		if debug {
+			fmt.Fprintf(os.Stderr, "[dcd-debug] resolveChunks: got continuation (%d bytes)\n", len(chunk))
 		}
 		full.WriteString(chunk)
 	}

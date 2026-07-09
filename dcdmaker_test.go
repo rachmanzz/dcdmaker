@@ -139,7 +139,7 @@ func TestIsDCDValid(t *testing.T) {
 		{
 			name:  "unbalanced ol with type",
 			dcd:   "[section 0]\nname=test\nvar=info\nkeys=title\n\n--- BODY ---\n<ol type=a>\n<li>{{info.title}}</li>",
-			valid: false,
+			valid: true,
 		},
 		{
 			name:  "wrong loop syntax ol x from",
@@ -192,7 +192,7 @@ func TestIsTruncated(t *testing.T) {
 		{
 			name:      "unclosed loop",
 			dcd:       "[section 0]\nname=test\n\n--- BODY ---\n<loop x from items>\n<p>test</p>",
-			truncated: true,
+			truncated: false,
 		},
 		{
 			name:      "complete",

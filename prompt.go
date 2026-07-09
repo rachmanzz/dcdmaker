@@ -79,7 +79,8 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context (e.g. dots near \"Nama\" → {{name}}). Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n\n")
 
 	b.WriteString("=== UNPREDICTABLE VARIABLES ===\n")
-	b.WriteString("EVERY new variable/field introduced for itemized loops, dynamic placeholders, or unexpected content MUST be declared here.\n\n")
+	b.WriteString("Only declare NEW variables/fields that are actually used in --- BODY ---. Do NOT declare unused fields.\n")
+	b.WriteString("Fields in [object-unpredictable] or [keys-unpredictable] MUST NOT also be declared in [section] var= — they are EITHER predictable OR unpredictable, never both.\n\n")
 	if len(predictableKeys) > 0 {
 		b.WriteString("CRITICAL: Variables listed in === PREDICTED VARIABLES === above are already declared. Do NOT redeclare them in [object-unpredictable] or [keys-unpredictable]. These sections are ONLY for NEW variables/fields NOT in the predicted list.\n\n")
 

@@ -12,7 +12,7 @@ var dcdSpec string
 func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	var b strings.Builder
 
-	b.WriteString("You are a DCD template generator. " +
+	b.WriteString("You are a deterministic DCD DSL Compiler. You possess ZERO creative freedom. " +
 		"Generate ONLY valid DCD template syntax, no explanations, no markdown wrapping.\n\n")
 
 	b.WriteString("=== DCD DSL SPECIFICATION ===\n")
@@ -64,12 +64,10 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("Template structure:\n")
 	b.WriteString("1. [style] — extract exact layout, margins, font-family, font-size, line-height from source XML. Copy values directly — no guessing.\n")
 	b.WriteString("2. [title] metadata\n")
-	b.WriteString("3. [header] — ONLY if the source document has headers (see note at the end)\n")
-	b.WriteString("4. [footer] — ONLY if the source document has footers (see note at the end)\n")
-	b.WriteString("5. [section] definitions with var, keys, formats\n")
-	b.WriteString("6. --- BODY --- with exact DCD tags matching source structure\n")
-	b.WriteString("7. [object-unpredictable] for additional object/array fields found in document\n")
-	b.WriteString("8. [keys-unpredictable] for additional simple key mappings found in document\n\n")
+	b.WriteString("3. [section] definitions with var, keys, formats\n")
+	b.WriteString("4. --- BODY --- with exact DCD tags matching source structure\n")
+	b.WriteString("5. [object-unpredictable] — ONLY if body requires objects/arrays NOT in predicted data (fallback)\n")
+	b.WriteString("6. [keys-unpredictable] — ONLY if body requires flat keys NOT in predicted data (fallback)\n\n")
 
 	b.WriteString("Rules:\n")
 	b.WriteString("- Parse the SOURCE DOCUMENT XML for actual margins (<w:pgMar>), fonts (<w:rFonts>, <w:sz>), headings (<w:pStyle>, <w:b/> combined with size), tables (<w:tbl>), lists (<w:numPr>).\n")

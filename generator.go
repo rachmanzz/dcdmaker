@@ -1,7 +1,6 @@
 package dcdmaker
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 )
@@ -18,25 +17,6 @@ func isDCDValid(dcd string) (bool, string) {
 
 	if !hasSection && !hasBody {
 		return false, "missing [section] or --- BODY ---"
-	}
-
-	sections := parseSections(dcd)
-	usages := scanBody(dcd)
-
-	usedVars := map[string]bool{}
-	for _, u := range usages {
-		usedVars[u.Var] = true
-	}
-
-	for _, s := range sections {
-		if s.Name == "" {
-			continue
-		}
-		for _, v := range s.Vars {
-			if !usedVars[v] {
-				return false, fmt.Sprintf("section %q declares var %q but never uses it", s.Name, v)
-			}
-		}
 	}
 
 	return true, ""

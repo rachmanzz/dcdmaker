@@ -21,7 +21,7 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 
 	if len(predictableKeys) > 0 {
 		b.WriteString("=== PREDICTED VARIABLES ===\n")
-		b.WriteString("Use these exact variable names and fields:\n\n")
+		b.WriteString("Only declare variables that are actually used in --- BODY ---. Do NOT over-declare.\n\n")
 		for _, k := range predictableKeys {
 			switch k.Type {
 			case VarArray:

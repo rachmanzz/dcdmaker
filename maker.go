@@ -225,7 +225,6 @@ func (m *Maker) generate(data []byte) (string, error) {
 			}
 
 			result = sanitizeDCD(result)
-			result = fixVarsAndKeys(result)
 			result = fixUnpredictableOverlap(result, m.predictableKeys)
 
 			if debug {

@@ -76,16 +76,12 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context (e.g. dots near \"Nama\" → {{name}}). Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n")
 	b.WriteString("- CRITICAL: Do NOT copy all predicted variables into every section. Distribute them based on actual usage per section.\n")
 	b.WriteString("- CRITICAL: Loop aliases (e.g., `x` in `<loop x from items>`) are local to the loop body. Do NOT list them in `var=`.\n")
-
 	b.WriteString("- CRITICAL: `type=N` in `<loop:ol>` controls the numbering style ONLY (a, A, 1, i, I). It does NOT select, filter, or group items. Looping the same source multiple times with different `type=` values renders ALL items each time — duplicates. Do NOT do this.\n")
 	b.WriteString("- CRITICAL: If the source document contains multiple distinct entries needing different formatting, use separate source arrays or separate sections. Do NOT merge distinct entries into one array then differentiate via `type=`.\n\n")
 
 
 	if len(predictableKeys) > 0 {
-		b.WriteString("CRITICAL: Variables listed in === PREDICTED VARIABLES === above are already declared. Do NOT redeclare them in [object-unpredictable] or [keys-unpredictable]. These sections are ONLY for NEW variables/fields NOT in the predicted list.\n\n")
-
 		b.WriteString("=== FORBIDDEN IN UNPREDICTABLE ===\n")
-		b.WriteString("The following names/keys are already declared as predicted variables. Do NOT put them in [object-unpredictable] or [keys-unpredictable]:\n")
 		for _, k := range predictableKeys {
 			switch k.Type {
 			case VarObject, VarArray:

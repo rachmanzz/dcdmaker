@@ -24,27 +24,6 @@ func sessionPath(output string) string {
 	return filepath.Join(dir, name)
 }
 
-func saveSession(path string, m *Maker, result string, history []Message) error {
-	s := &Session{
-		Source:        m.source,
-		Output:        path,
-		UserPrompt:    m.userPrompt,
-		PartialOutput: result,
-		Step:          1,
-		History:       history,
-	}
-	if len(m.providers) > 0 {
-		s.ProviderName = m.providers[0].Name()
-	}
-
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return fmt.Errorf("session marshal: %w", err)
-	}
-
-	return os.WriteFile(sessionPath(path), data, 0644)
-}
-
 func loadSession(output string) (*Session, error) {
 	data, err := os.ReadFile(sessionPath(output))
 	if err != nil {

@@ -116,7 +116,7 @@ func validateVarsAndKeys(dcd string) error {
 	sections := parseSections(dcd)
 	usages := scanBody(dcd)
 
-	declaredVars := map[string][]string{}   // varName -> [field1, field2, ...]
+	declaredVars := map[string][]string{} // varName -> [field1, field2, ...]
 	declaredKeys := map[string]bool{}
 	var declaredVarList []string
 	var declaredKeyList []string
@@ -250,7 +250,8 @@ func fixUnpredictableOverlap(dcd string, predictableKeys []KeyDef) string {
 			if m != nil && predictedNames[m[1]] {
 				continue
 			}
-			newSection.WriteString(line + "\n")
+			newSection.WriteString(line)
+			newSection.WriteString("\n")
 			hasContent = true
 		}
 
@@ -295,9 +296,12 @@ func fixUnpredictableOverlap(dcd string, predictableKeys []KeyDef) string {
 			}
 			if len(kept) > 0 {
 				if hasDash {
-					newSection.WriteString("- " + strings.Join(kept, ", ") + "\n")
+					newSection.WriteString("- ")
+					newSection.WriteString(strings.Join(kept, ", "))
+					newSection.WriteString("\n")
 				} else {
-					newSection.WriteString(strings.Join(kept, ", ") + "\n")
+					newSection.WriteString(strings.Join(kept, ", "))
+					newSection.WriteString("\n")
 				}
 				hasContent = true
 			}
@@ -321,5 +325,3 @@ func contains(list []string, s string) bool {
 	}
 	return false
 }
-
-

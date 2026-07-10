@@ -71,9 +71,6 @@ func (p *geminiProvider) generateContent(ctx context.Context, parts []*genai.Par
 	}
 
 	output := strings.Join(out, "")
-	if cand.FinishReason == genai.FinishReasonMaxTokens {
-		output += "\n\n<TRUNCATED/>"
-	}
 
 	return output, nil
 }
@@ -93,13 +90,6 @@ func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ 
 	b.WriteString("\n\n=== SOURCE DOCUMENT XML ===\n")
 	b.WriteString(content.DocumentXML)
 	b.WriteString("\n\n")
-	if !content.HasHeader {
-		b.WriteString("NOTE: The source document has NO header. Do NOT generate [header].\n")
-	}
-	if !content.HasFooter {
-		b.WriteString("NOTE: The source document has NO footer. Do NOT generate [footer].\n")
-	}
-
 	return p.generateContent(ctx, []*genai.Part{{Text: b.String()}})
 }
 
@@ -155,9 +145,6 @@ func (p *geminiProvider) GenerateWithHistory(ctx context.Context, history []Mess
 	}
 
 	output := strings.Join(out, "")
-	if cand.FinishReason == genai.FinishReasonMaxTokens {
-		output += "\n\n<TRUNCATED/>"
-	}
 
 	return output, nil
 }

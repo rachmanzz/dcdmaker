@@ -217,13 +217,6 @@ func (m *Maker) generate(data []byte) (string, error) {
 					provider.Name(), attempt+1, rawPath, len(result))
 			}
 
-			result = resolveChunks(ctx, provider, result, m.maxRetries)
-
-			if debug {
-				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: resolveChunks done (%d bytes), sanitizing...\n",
-					provider.Name(), attempt+1, len(result))
-			}
-
 			result = sanitizeDCD(result)
 			result = fixUnpredictableOverlap(result, m.predictableKeys)
 
@@ -323,42 +316,4 @@ func (m *Maker) resumeSession(session *Session, output string) error {
 	return fmt.Errorf("dcdmaker: resume exhausted retries")
 }
 
-func resolveChunks(ctx context.Context, provider Provider, result string, maxChunks int) string {
-	debug := os.Getenv("DCD_DEBUG") == "true"
-	var full strings.Builder
-	full.WriteString(result)
 
-	for range maxChunks {
-		dcd := full.String()
-		trunc := isTruncated(dcd)
-		incomp := isIncomplete(dcd)
-		if !trunc && !incomp {
-			break
-		}
-
-		if debug {
-			n := dcd
-			if len(n) > 120 {
-				n = n[:120] + "..."
-			}
-			fmt.Fprintf(os.Stderr, "[dcd-debug] resolveChunks: truncated=%v incomplete=%v, requesting continuation...\n", trunc, incomp)
-		}
-
-		clean := strings.TrimSuffix(dcd, "\n\n<TRUNCATED/>")
-		prompt := continuationPrompt(clean)
-
-		chunk, err := provider.Generate(ctx, prompt)
-		if err != nil {
-			if debug {
-				fmt.Fprintf(os.Stderr, "[dcd-debug] resolveChunks: continuation failed: %v\n", err)
-			}
-			break
-		}
-		if debug {
-			fmt.Fprintf(os.Stderr, "[dcd-debug] resolveChunks: got continuation (%d bytes)\n", len(chunk))
-		}
-		full.WriteString(chunk)
-	}
-
-	return full.String()
-}

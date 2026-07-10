@@ -50,8 +50,8 @@ func parseUnpredictableKeys(dcd string) []string {
 		if line == "" || strings.HasPrefix(line, "[") || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if strings.HasPrefix(line, "- ") {
-			line = strings.TrimPrefix(line, "- ")
+		if after, ok := strings.CutPrefix(line, "- "); ok {
+			line = after
 		}
 		out = append(out, splitFields(line)...)
 	}

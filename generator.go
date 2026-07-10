@@ -2,7 +2,6 @@ package dcdmaker
 
 import (
 	"strings"
-	"unicode"
 )
 
 func isDCDValid(dcd string) (bool, string) {
@@ -37,36 +36,6 @@ func isTruncated(dcd string) bool {
 	return false
 }
 
-func isIncomplete(dcd string) bool {
-	dcd = strings.TrimSpace(dcd)
-
-	lines := strings.Split(dcd, "\n")
-	if len(lines) < 30 {
-		return true
-	}
-
-	sectionCount := strings.Count(dcd, "[section")
-	bodyCount := strings.Count(dcd, "--- BODY ---")
-
-	hasUnpredictable := strings.Contains(dcd, "[object-unpredictable]") ||
-		strings.Contains(dcd, "[keys-unpredictable]")
-
-	if hasUnpredictable {
-		objs := parseUnpredictableObjects(dcd)
-		keys := parseUnpredictableKeys(dcd)
-		if len(objs) == 0 && len(keys) == 0 {
-			return true
-		}
-		return false
-	}
-
-	if sectionCount >= 1 && bodyCount < sectionCount {
-		return true
-	}
-
-	return false
-}
-
 func sanitizeDCD(dcd string) string {
 	dcd = strings.TrimSpace(dcd)
 
@@ -84,11 +53,4 @@ func sanitizeDCD(dcd string) string {
 	return strings.TrimSpace(dcd)
 }
 
-func containsAlpha(s string) bool {
-	for _, r := range s {
-		if unicode.IsLetter(r) {
-			return true
-		}
-	}
-	return false
-}
+

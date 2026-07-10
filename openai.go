@@ -51,13 +51,6 @@ func (p *openAIProvider) GenerateWithFile(ctx context.Context, prompt string, _ 
 	b.WriteString("\n\n=== SOURCE DOCUMENT XML ===\n")
 	b.WriteString(content.DocumentXML)
 	b.WriteString("\n\n")
-	if !content.HasHeader {
-		b.WriteString("NOTE: The source document has NO header. Do NOT generate [header].\n")
-	}
-	if !content.HasFooter {
-		b.WriteString("NOTE: The source document has NO footer. Do NOT generate [footer].\n")
-	}
-
 	return p.chat(ctx, []openai.ChatCompletionMessage{
 		{Role: openai.ChatMessageRoleUser, Content: b.String()},
 	})
@@ -106,9 +99,6 @@ func (p *openAIProvider) chat(ctx context.Context, messages []openai.ChatComplet
 	}
 
 	result := resp.Choices[0].Message.Content
-	if resp.Choices[0].FinishReason == "length" {
-		result += "\n\n<TRUNCATED/>"
-	}
 
 	return result, nil
 }

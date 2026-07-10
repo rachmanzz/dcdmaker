@@ -30,7 +30,6 @@ func main() {
 	openaiModel := fs.String("openai-model", "", "OpenAI model name")
 	openaiBaseURL := fs.String("openai-base-url", "", "OpenAI-compatible base URL")
 
-	resume := fs.Bool("resume", false, "Resume from previous session")
 	noGemini := fs.Bool("no-gemini", false, "Disable Gemini provider")
 	maxRetries := fs.Int("max-retries", 3, "Max retries per provider (env: DCD_MAX_RETRIES)")
 	noOpenAI := fs.Bool("no-openai", false, "Disable OpenAI provider")
@@ -103,7 +102,7 @@ func main() {
 	}
 
 	maker := dcdmaker.NewMaker(providers...)
-	maker.Source(*source).OptionalPrompt(*prompt).Resume(*resume).MaxRetries(retries)
+	maker.Source(*source).OptionalPrompt(*prompt).MaxRetries(retries)
 
 	if err := maker.Run(*output); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

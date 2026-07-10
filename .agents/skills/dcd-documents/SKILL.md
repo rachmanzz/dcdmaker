@@ -81,7 +81,7 @@ You must declare and consume variables precisely based on their data type, predi
 
 ### C. Key Rules & Behavior
 
-* **Data Binding:** Any `{{prefix.key}}` must be mapped via `var`. Unmapped variables are rendered as literal text.
+* **Data Binding:** Any `{{prefix.key}}` must be mapped via `var`.
 * **Built-in Vars:** `{{page}}`, `{{total}}`, `{{title}}`, and `{{date}}` are auto-resolved and DO NOT need declaration.
 * **Arrays/Loops:** Format array fields using their dotted schema path (e.g., `entries.date_field`). The engine automatically matches nested loop variables (like `{{x.date_field}}`) by stripping the runtime array index.
 * **Strict Usage:** Every variable in `var=` and every key in `keys=` MUST be used at least once in `--- BODY ---`. Do NOT declare unused variables or keys.
@@ -121,7 +121,7 @@ The `--- BODY ---` section follows strict structural rules. You must choose the 
 * **Syntax:** `<w:align|styles attributes>`
 * *Alignments:* `c` (center), `r` (right), `j` (justify), `l` (left - default).
 * *Styles:* `b` (bold), `i` (italic), `u` (underline). Chain them using `|` (e.g., `<w:c|b|i>`).
-* *Attributes:* `size` or `font-size` (in pt) and `color` (hex or name). Separate with spaces ONLY.
+* *Attributes:* `size` or `font-size` (in pt), `color` (hex or name), `indent=N` (first-line indent in pt), `hanging=N` (hanging indent in pt). Separate with spaces ONLY.
 
 
 
@@ -129,7 +129,7 @@ The `--- BODY ---` section follows strict structural rules. You must choose the 
 
 * **Use Case:** When a paragraph requires mixed inline formatting.
 * **Rule:** Fully supports nested inline tags.
-* **Attributes:** `align=left` (supported: left, center, right, justify), `size=N`, `color=#hex` or color name. Separate with spaces ONLY.
+* **Attributes:** `align=left` (supported: left, center, right, justify), `size=N`, `color=#hex` or color name, `indent=N` (first-line indent in pt), `hanging=N` (hanging indent in pt). Separate with spaces ONLY.
 
 ### B. Allowed Inline Tags
 

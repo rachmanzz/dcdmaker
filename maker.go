@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -65,7 +64,6 @@ type Maker struct {
 	providers       []Provider
 	source          string
 	userPrompt      string
-	resume          bool
 	predictableKeys []KeyDef
 	lastProvider    string
 	lastResult      string
@@ -86,11 +84,6 @@ func (m *Maker) Source(path string) *Maker {
 
 func (m *Maker) OptionalPrompt(p string) *Maker {
 	m.userPrompt = p
-	return m
-}
-
-func (m *Maker) Resume(enabled bool) *Maker {
-	m.resume = enabled
 	return m
 }
 
@@ -135,9 +128,6 @@ func (m *Maker) Generate() (string, error) {
 	if m.source == "" {
 		return "", fmt.Errorf("dcdmaker: source document required")
 	}
-	if m.resume {
-		return "", fmt.Errorf("dcdmaker: Resume(true) is not supported with Generate(), use Run() instead")
-	}
 
 	data, err := os.ReadFile(m.source)
 	if err != nil {
@@ -161,13 +151,6 @@ func (m *Maker) Run(output string) error {
 		return fmt.Errorf("dcdmaker: source document required")
 	}
 
-	if m.resume {
-		session, err := loadSession(output)
-		if err == nil && session.PartialOutput != "" {
-			return m.resumeSession(session, output)
-		}
-	}
-
 	data, err := os.ReadFile(m.source)
 	if err != nil {
 		return fmt.Errorf("dcdmaker: read source: %w", err)
@@ -178,9 +161,6 @@ func (m *Maker) Run(output string) error {
 		return err
 	}
 
-	if m.resume {
-		_ = clearSession(output)
-	}
 	return os.WriteFile(output, []byte(result), 0644)
 }
 
@@ -264,56 +244,5 @@ func (m *Maker) generate(data []byte) (string, error) {
 	return "", fmt.Errorf("dcdmaker: no providers configured")
 }
 
-func (m *Maker) resumeSession(session *Session, output string) error {
-	if len(m.providers) == 0 {
-		return fmt.Errorf("dcdmaker: at least one provider required")
-	}
-
-	provider := m.providers[0]
-	for _, p := range m.providers {
-		if p.Name() == session.ProviderName {
-			provider = p
-			break
-		}
-	}
-
-	prompt := continuationPrompt(session.PartialOutput)
-
-	ctx := context.Background()
-
-	var full strings.Builder
-	full.WriteString(session.PartialOutput)
-
-	for attempt := range 3 {
-		result, err := provider.GenerateWithHistory(ctx, session.History, prompt)
-		if err != nil {
-			if attempt < 2 {
-				continue
-			}
-			return fmt.Errorf("dcdmaker: resume failed: %w", err)
-		}
-
-		full.WriteString(result)
-
-		if isTruncated(full.String()) {
-			prompt = continuationPrompt(full.String())
-			continue
-		}
-
-		dcd := sanitizeDCD(full.String())
-		valid, _ := isDCDValid(dcd)
-		if valid {
-			m.lastProvider = provider.Name()
-			if m.resume {
-				_ = clearSession(output)
-			}
-			return os.WriteFile(output, []byte(dcd), 0644)
-		}
-
-		return fmt.Errorf("dcdmaker: resume produced invalid DCD")
-	}
-
-	return fmt.Errorf("dcdmaker: resume exhausted retries")
-}
 
 

@@ -1,6 +1,7 @@
 package dcdmaker
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -18,22 +19,13 @@ func isDCDValid(dcd string) (bool, string) {
 		return false, "missing [section] or --- BODY ---"
 	}
 
+	sectionCount := strings.Count(dcd, "[section")
+	bodyCount := strings.Count(dcd, "--- BODY ---")
+	if sectionCount != bodyCount {
+		return false, fmt.Sprintf("section/body mismatch: %d sections, %d bodies", sectionCount, bodyCount)
+	}
+
 	return true, ""
-}
-
-func isTruncated(dcd string) bool {
-	dcd = strings.TrimSpace(dcd)
-	if strings.HasSuffix(dcd, "<TRUNCATED/>") {
-		return true
-	}
-
-	mainSections := strings.Count(dcd, "[section")
-	mainBodies := strings.Count(dcd, "--- BODY ---")
-	if mainSections != mainBodies {
-		return true
-	}
-
-	return false
 }
 
 func sanitizeDCD(dcd string) string {

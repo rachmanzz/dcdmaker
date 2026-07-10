@@ -19,17 +19,13 @@ func TestNewMaker(t *testing.T) {
 func TestMakerChain(t *testing.T) {
 	m := NewMaker().
 		Source("test.docx").
-		OptionalPrompt("create invoice template").
-		Resume(true)
+		OptionalPrompt("create invoice template")
 
 	if m.source != "test.docx" {
 		t.Fatalf("expected test.docx, got %s", m.source)
 	}
 	if m.userPrompt != "create invoice template" {
 		t.Fatalf("unexpected prompt: %s", m.userPrompt)
-	}
-	if !m.resume {
-		t.Fatal("expected resume true")
 	}
 }
 
@@ -257,31 +253,6 @@ func TestGenerateRequiresProviders(t *testing.T) {
 	_, err := m.Generate()
 	if err == nil {
 		t.Fatal("expected error for missing providers")
-	}
-}
-
-func TestGenerateRejectsResume(t *testing.T) {
-	m := NewMaker(Gemini(WithAPIKey("test"))).
-		Source("test.docx").
-		Resume(true)
-	_, err := m.Generate()
-	if err == nil {
-		t.Fatal("expected error for resume with Generate()")
-	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func TestSessionPath(t *testing.T) {
-	path := sessionPath("templates/invoice.dcd")
-	expected := "templates/invoice.dcd.session.json"
-	if path != expected {
-		t.Errorf("sessionPath() = %q, want %q", path, expected)
 	}
 }
 
@@ -568,17 +539,13 @@ func TestMakerPredictableKeysChain(t *testing.T) {
 			Object("info", "a", "b"),
 			Array("list", "x", "y", "z"),
 		).
-		OptionalPrompt("test").
-		Resume(true)
+		OptionalPrompt("test")
 
 	if len(m.predictableKeys) != 2 {
 		t.Fatalf("expected 2 predictable keys, got %d", len(m.predictableKeys))
 	}
 	if m.source != "test.docx" {
 		t.Errorf("source = %q, want %q", m.source, "test.docx")
-	}
-	if !m.resume {
-		t.Error("expected resume true")
 	}
 }
 

@@ -71,7 +71,7 @@ You must declare and consume variables precisely based on their data type, predi
 * **EXCLUSIVE REGISTRATION RULE:** Any key or dotted-path targeted in `formats=` MUST be explicitly listed in `keys=`.
 * *Example:* To format `founders.birthdate`, it MUST be declared as `keys=founders.birthdate` and `formats=[founders.birthdate:dd-MM-yyyy]`.
 
-
+* **Strict Section Attributes Rule:** The ONLY valid attributes inside `[section N]` are `name=`, `var=`, `keys=`, and `formats=`. Do NOT use `keys-unpredictable=`, `var-unpredictable=`, or any other invented attributes. For unpredictable fields, use the dedicated `[keys-unpredictable]` section header, not an attribute inside a `[section N]`.
 
 ### B. Section Limits & Splitting
 

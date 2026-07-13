@@ -46,6 +46,21 @@ m=1 # all sides
 
 ```
 
+### Paragraph Indentation Defaults
+
+Global default for paragraph indentation, applied to all `<p>` and `<li>` unless overridden by inline attributes.
+
+```ini
+[style]
+indent=0.5
+hanging=0.25
+```
+
+* `indent` — left indent (in document unit)
+* `hanging` — hanging indent (in document unit)
+
+Inline `<p indent=X>` / `<li hanging=Y>` overrides this default. See [Paragraph Properties](#a-paragraph-choices-wrapper-w-vs-rich-p) for details.
+
 ## 4. SECTIONS, VARIABLES, KEYS & FORMATS LOGIC
 
 You must declare and consume variables precisely based on their data type, predictability, and formatting requirements. Split your document by logical context/topic, not just by size.
@@ -120,8 +135,9 @@ The `--- BODY ---` section follows strict structural rules. You must choose the 
 * **CRITICAL NESTING RULE:** MUST contain ONLY pure text and `{{vars}}`. **Nested tags (e.g., `<b>`, `<u>`) are STRICTLY FORBIDDEN inside `<w:*>`.**
 * **Syntax:** `<w:align|styles attributes>`
 * *Alignments:* `c` (center), `r` (right), `j` (justify), `l` (left - default).
-* *Styles:* `b` (bold), `i` (italic), `u` (underline). Chain them using `|` (e.g., `<w:c|b|i>`).
-* *Attributes:* `size` or `font-size` (in pt), `color` (hex or name), `indent=N` (first-line indent in pt), `hanging=N` (hanging indent in pt). Separate with spaces ONLY.
+* *Styles:* `b` (bold), `i` (italic), `u` (underline), `s` (strikethrough). Chain them using `|` (e.g., `<w:c|b|i>`). Common combinations: `<w:b|i|u>` (bold + italic + underline), `<w:s>` (strikethrough-only wrapper), `<w:b|s>` (bold + strikethrough).
+* *Attributes:* `size` or `font-size` (in pt), `color` (hex or name), `indent=N` (first-line indent), `hanging=N` (hanging indent). Both use `[style] unit=` — e.g. `indent=1` with `unit=inch` means 1 inch indent. Do NOT copy DOCX raw values directly; convert to document unit.
+* *Underline Style (for `<w:u>` only):* `underline=single|double|dotted|dash|wavy` (e.g., `<w:u underline=double>...</w:u>`).
 
 
 
@@ -129,21 +145,24 @@ The `--- BODY ---` section follows strict structural rules. You must choose the 
 
 * **Use Case:** When a paragraph requires mixed inline formatting.
 * **Rule:** Fully supports nested inline tags.
-* **Attributes:** `align=left` (supported: left, center, right, justify), `size=N`, `color=#hex` or color name, `indent=N` (first-line indent in pt), `hanging=N` (hanging indent in pt). Separate with spaces ONLY.
+* **Attributes:** `align=left` (supported: left, center, right, justify), `size=N`, `color=#hex` or color name, `indent=N` (first-line indent), `hanging=N` (hanging indent). Both use `[style] unit=` — e.g. `indent=1` with `unit=inch` means 1 inch indent. Do NOT copy DOCX raw values directly; convert to document unit.
 
 ### B. Allowed Inline Tags
 
 These tags are strictly permitted ONLY inside `<p>` and `<li>`:
 
-* `<b>`, `<i>`, `<u>`, `<code>...</code>`: Paired inline tags. `<code>` renders monospace like `<b>` renders bold.
-* `<set:b|i>`: Combined formatting. MUST use a plain `|` (no backslashes).
+* `<b>`, `<i>`, `<u>`, `<s>`, `<code>...</code>`: Paired inline tags. `<code>` renders monospace; `<s>` renders strikethrough.
+* `<sub>...</sub>` / `<sup>...</sup>`: Subscript and superscript.
+* `<mark>...</mark>`: Highlight (default yellow). Optional: `<mark color=green>...</mark>`.
+* `<set:flags>...</set:flags>`: Combined formatting. Supports any combination of `b`, `i`, `u`, `s`, `code` — e.g., `<set:b|i>`, `<set:b|i|u>`, `<set:s|b>`. Must use a plain `|` (no backslashes). Supports `underline=` attribute: `<set:u underline=double>...</set:u>`.
 * `<tab>` or `<tab size=N>`: Tab character.
 
 ### C. Standalone Tags (ZERO TOLERANCE NESTING)
 
-Page breaks and dividers are structurally independent.
+Page breaks, line breaks, and dividers are structurally independent.
 
-* `<pb>`, `<page-break>`, and `<hr>` MUST BE **100% STANDALONE**.
+* `<pb>`, `<page-break>`, `<br>`, and `<hr>` MUST BE **100% STANDALONE**.
+* `<br>` creates a line break within a paragraph context (use between `<p>` blocks or as a paragraph separator).
 * **FATAL ERROR:** NEVER place a break or rule inside a text block. You MUST split the paragraphs around the break instead.
 
 ### ✅ CORRECT VS ❌ FATAL VIOLATIONS
@@ -153,11 +172,27 @@ Page breaks and dividers are structurally independent.
 
 <w:c>No <u>tags</u> allowed</w:c>
 
-<p align=center>Text with <b>bold</b></p>
+<w:b|i|u>Bold, italic, underline wrapper</w:b|i|u>
+
+<w:u underline=double>Double underline paragraph</w:u>
+
+<w:s>Strikethrough paragraph</w:s>
+
+<p align=center>Text with <b>bold</b> and <s>strikethrough</s></p>
+
+<p>Subscript: H<sub>2</sub>O — Superscript: m<sup>2</sup></p>
+
+<p><mark>Highlighted text</mark> and <mark color=yellow>custom color</mark></p>
+
+<p><set:b|i|u>Bold, italic, underline combined inline</set:b|i|u></p>
 
 <p>Before break</p>
 <pb>
 <p>After break</p>
+
+<p>First line</p>
+<br>
+<p>Second line after line break</p>
 
 <p>Text <pb> inside</p>
 

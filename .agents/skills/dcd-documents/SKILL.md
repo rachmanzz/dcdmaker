@@ -58,6 +58,14 @@ Inline `<p indent=X>` / `<li hanging=Y>` overrides this default. See [Paragraph 
 
 Split documents by logical context/topic, not by size.
 
+### HARD LIMITS (ZERO TOLERANCE)
+
+You MUST enforce these limits for EVERY section. No exceptions.
+
+* Every section MUST have ≤ 3 `var` entries and ≤ 15 `keys` entries.
+* If you exceed either limit, you MUST create a new `[section N]`. NEVER cram extra vars or keys into one section.
+* Dotted keys (e.g. `founders.birthdate`) are ONLY allowed in `keys=` when a matching `formats=` entry exists. If there is no `formats=` for a dotted key, you MUST remove it from `keys=`. NO exceptions.
+
 Every `[section N]` MUST declare attributes in this order:
 
 `name=` → `var=` → `keys=` → `formats=`
@@ -74,7 +82,7 @@ Every `[section N]` MUST declare attributes in this order:
 * **`keys=`**
   Declare standalone flat fields (e.g. `letter_number`, `date`).
 
-  Object or array dot-paths (e.g. `founders.birthdate`) MUST NOT appear unless explicitly targeted by `formats=`.
+  Object or array dot-paths (e.g. `founders.birthdate`) MUST NOT appear unless explicitly targeted by `formats=`. If an object/array field does not require formatting, it is strictly forbidden from appearing in `keys=`.
 
 * **`formats=`**
   Syntax: `[key:format]` or `[source.field:format]`.
@@ -93,7 +101,7 @@ Every `[section N]` MUST declare attributes in this order:
 
 ### B. Section Limits & Splitting
 
-* ≤ 3 `var` and ≤ 15 `keys` per section. Exceed → create another `[section N]`.
+* You MUST keep ≤ 3 `var` and ≤ 15 `keys` per section. If you exceed, you MUST create another `[section N]`.
 * `[section:next-page N]` is ONLY for HARD PAGE BREAKS — do NOT use it to split logical sections.
 
 ### C. Binding Rules
@@ -124,6 +132,19 @@ formats=[seller.birthdate:dd-MM-yyyy]
 <p>Seller: {{seller.name}} (DOB: {{seller.birthdate}})</p>
 
 ```
+
+### D. Validation Checklist (BEFORE outputting any section)
+
+You MUST verify each `[section N]` against this checklist. If ANY check fails, the section is INVALID and you MUST fix it before outputting.
+
+* [ ] Section has ≤ 3 `var` entries
+* [ ] Section has ≤ 15 `keys` entries
+* [ ] No dotted keys in `keys=` without a matching `formats=` entry
+* [ ] Every `var=` and `keys=` is used at least once in `--- BODY ---`
+* [ ] Attribute order: `name=` → `var=` → `keys=` → `formats=`
+* [ ] No invented attributes beyond `name=`, `var=`, `keys=`, `formats=`
+
+NEVER skip this checklist. NEVER output a section that fails any check.
 
 ## 5. BODY TAGS & NESTING LOGIC
 
@@ -330,7 +351,9 @@ Every loop MUST follow this exact sequence: iteration action first, then attribu
 
 <loop:ul x from items>
   {{x.label}}
-</loop> <ol>
+</loop> 
+
+<ol>
   <loop x from items>
     <li>{{x.label}}</li>
   </loop>

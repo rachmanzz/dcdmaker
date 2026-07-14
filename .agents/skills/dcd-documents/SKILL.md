@@ -155,12 +155,21 @@ You MUST verify each `[section N]` against this checklist. If ANY check fails, t
 * [ ] Attribute order: `name=` → `var=` → `keys=` → `formats=`
 * [ ] No invented attributes beyond `name=`, `var=`, `keys=`, `formats=`
 * [ ] No invented object names — all `var=` and dotted keys must come from the prompt
+* [ ] Paragraphs stay as `<p>`/`<w:*>` and lists stay as `<ol>`/`<ul>` — no swapping based on text prefixes
 
 NEVER skip this checklist. NEVER output a section that fails any check.
 
 ## 5. BODY TAGS & NESTING LOGIC
 
 Choose paragraph tags solely by whether inline formatting is required.
+
+### CRITICAL: Paragraph vs List Detection
+
+You MUST preserve the source DOCX structure. Do NOT convert paragraphs to lists or lists to paragraphs based on text content alone.
+
+* **Paragraph:** Continuous text, even if it contains prefixes like `a.`, `b.`, `1.`, `2.`. If the DOCX uses paragraph style (not list style), output `<p>` or `<w:*>`. The prefix is part of the text content, NOT a list marker.
+* **List:** Actual DOCX list items with bullet/number markers applied via list style. Use `<ol>` or `<ul>` with `<li>`.
+* **NEVER assume text with number/bullet prefixes is a list.** Check the DOCX paragraph style, not the text content.
 
 ### A. Paragraph Types
 

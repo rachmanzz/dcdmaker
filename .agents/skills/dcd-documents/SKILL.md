@@ -65,6 +65,7 @@ You MUST enforce these limits for EVERY section. No exceptions.
 * Every section MUST have ≤ 3 `var` entries and ≤ 15 `keys` entries.
 * If you exceed either limit, you MUST create a new `[section N]`. NEVER cram extra vars or keys into one section.
 * Dotted keys (e.g. `founders.birthdate`) are ONLY allowed in `keys=` when a matching `formats=` entry exists. If there is no `formats=` for a dotted key, you MUST remove it from `keys=`. NO exceptions.
+* NEVER invent object names that don't exist in the prompt. Only use object/array names explicitly provided in the prompt data.
 
 Every `[section N]` MUST declare attributes in this order:
 
@@ -81,6 +82,8 @@ Every `[section N]` MUST declare attributes in this order:
 
 * **`keys=`**
   Declare standalone flat fields (e.g. `letter_number`, `date`).
+
+  Flat keys from the prompt (e.g. `company_domicile`) MUST stay flat. Do NOT wrap them in invented object prefixes (e.g. `basic_info.company_domicile`). Use the exact key name from the prompt.
 
   Object or array dot-paths (e.g. `founders.birthdate`) MUST NOT appear unless explicitly targeted by `formats=`. If an object/array field does not require formatting, it is strictly forbidden from appearing in `keys=`.
 
@@ -131,6 +134,14 @@ formats=[seller.birthdate:dd-MM-yyyy]
 --- BODY ---
 <p>Seller: {{seller.name}} (DOB: {{seller.birthdate}})</p>
 
+[section 2] # Flat keys — no object prefix invented
+name=details
+keys=company_domicile, registration_date
+
+--- BODY ---
+<p>Domicile: {{company_domicile}}</p>
+<p>Registered: {{registration_date}}</p>
+
 ```
 
 ### D. Validation Checklist (BEFORE outputting any section)
@@ -143,6 +154,7 @@ You MUST verify each `[section N]` against this checklist. If ANY check fails, t
 * [ ] Every `var=` and `keys=` is used at least once in `--- BODY ---`
 * [ ] Attribute order: `name=` → `var=` → `keys=` → `formats=`
 * [ ] No invented attributes beyond `name=`, `var=`, `keys=`, `formats=`
+* [ ] No invented object names — all `var=` and dotted keys must come from the prompt
 
 NEVER skip this checklist. NEVER output a section that fails any check.
 

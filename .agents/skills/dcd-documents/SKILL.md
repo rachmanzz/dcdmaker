@@ -171,6 +171,10 @@ You MUST preserve the source DOCX structure. Do NOT convert paragraphs to lists 
 * **List:** Actual DOCX list items with bullet/number markers applied via list style. Use `<ol>` or `<ul>` with `<li>`.
 * **NEVER assume text with number/bullet prefixes is a list.** Check the DOCX paragraph style, not the text content.
 
+### Unsupported Features
+
+If DOCX contains features not supported by DCD tags (links, images, tables, etc.), use the closest DCD approximation or fall back to `<p>`. NEVER invent tags or use HTML tags.
+
 ### A. Paragraph Types
 
 #### **Wrapper (`<w:*>`) — Uniform Formatting**

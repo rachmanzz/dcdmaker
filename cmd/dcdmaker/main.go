@@ -33,6 +33,7 @@ func main() {
 	noGemini := fs.Bool("no-gemini", false, "Disable Gemini provider")
 	maxRetries := fs.Int("max-retries", 3, "Max retries per provider (env: DCD_MAX_RETRIES)")
 	noOpenAI := fs.Bool("no-openai", false, "Disable OpenAI provider")
+	stream := fs.Bool("stream", false, "Enable streaming (env: AI_STREAM, AI_OPENAPI_STREAM, AI_GEMINI_STREAM)")
 	version := fs.Bool("version", false, "Show version")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -62,10 +63,15 @@ func main() {
 		if model == "" {
 			model = envOr("AI_GEMINI_MODEL", "gemini-2.5-flash")
 		}
-		providers = append(providers, dcdmaker.Gemini(
+		opts := []dcdmaker.GeminiOption{
 			dcdmaker.WithAPIKey(key),
 			dcdmaker.WithModel(model),
-		))
+		}
+		geminiStream := *stream || envOr("AI_STREAM", "") == "true" || envOr("AI_GEMINI_STREAM", "") == "true"
+		if geminiStream {
+			opts = append(opts, dcdmaker.WithStream(true))
+		}
+		providers = append(providers, dcdmaker.Gemini(opts...))
 	}
 
 	if !*noOpenAI {
@@ -84,6 +90,10 @@ func main() {
 			}
 			if baseURL != "" {
 				opts = append(opts, dcdmaker.WithOpenAIBaseURL(baseURL))
+			}
+			openaiStream := *stream || envOr("AI_STREAM", "") == "true" || envOr("AI_OPENAPI_STREAM", "") == "true"
+			if openaiStream {
+				opts = append(opts, dcdmaker.WithOpenAIStream(true))
 			}
 			providers = append(providers, dcdmaker.OpenAI(opts...))
 		}

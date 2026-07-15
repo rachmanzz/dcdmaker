@@ -7,6 +7,7 @@ type geminiConfig struct {
 	Model       string
 	Temperature float64
 	Timeout     time.Duration
+	Stream      bool
 }
 
 type GeminiOption func(*geminiConfig)
@@ -25,6 +26,10 @@ func WithAPIKey(k string) GeminiOption {
 
 func WithTimeout(d time.Duration) GeminiOption {
 	return func(c *geminiConfig) { c.Timeout = d }
+}
+
+func WithStream(s bool) GeminiOption {
+	return func(c *geminiConfig) { c.Stream = s }
 }
 
 func Gemini(opts ...GeminiOption) Provider {
@@ -46,6 +51,7 @@ type openAIConfig struct {
 	Temperature float64
 	MaxTokens   int
 	Timeout     time.Duration
+	Stream      bool
 }
 
 type OpenAIOption func(*openAIConfig)
@@ -72,6 +78,10 @@ func WithOpenAIBaseURL(u string) OpenAIOption {
 
 func WithOpenAITimeout(d time.Duration) OpenAIOption {
 	return func(c *openAIConfig) { c.Timeout = d }
+}
+
+func WithOpenAIStream(s bool) OpenAIOption {
+	return func(c *openAIConfig) { c.Stream = s }
 }
 
 func OpenAI(opts ...OpenAIOption) Provider {

@@ -38,6 +38,13 @@ func (p *geminiProvider) getClient(ctx context.Context) (*genai.Client, error) {
 }
 
 func (p *geminiProvider) generateContent(ctx context.Context, parts []*genai.Part) (string, error) {
+	if p.cfg.Stream {
+		return p.generateContentStream(ctx, parts)
+	}
+	return p.generateContentSync(ctx, parts)
+}
+
+func (p *geminiProvider) generateContentSync(ctx context.Context, parts []*genai.Part) (string, error) {
 	client, err := p.getClient(ctx)
 	if err != nil {
 		return "", err
@@ -73,6 +80,44 @@ func (p *geminiProvider) generateContent(ctx context.Context, parts []*genai.Par
 	output := strings.Join(out, "")
 
 	return output, nil
+}
+
+func (p *geminiProvider) generateContentStream(ctx context.Context, parts []*genai.Part) (string, error) {
+	client, err := p.getClient(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, p.cfg.Timeout)
+	defer cancel()
+
+	config := &genai.GenerateContentConfig{
+		Temperature: genai.Ptr(float32(p.cfg.Temperature)),
+	}
+
+	contents := []*genai.Content{{Parts: parts}}
+	iter := client.Models.GenerateContentStream(ctx, p.cfg.Model, contents, config)
+
+	var result strings.Builder
+	for resp, err := range iter {
+		if err != nil {
+			if result.Len() > 0 {
+				return result.String(), nil
+			}
+			return "", fmt.Errorf("gemini: stream: %w", err)
+		}
+		if len(resp.Candidates) > 0 && resp.Candidates[0].Content != nil {
+			for _, part := range resp.Candidates[0].Content.Parts {
+				result.WriteString(part.Text)
+			}
+		}
+	}
+
+	if result.Len() == 0 {
+		return "", fmt.Errorf("gemini: empty stream response")
+	}
+
+	return result.String(), nil
 }
 
 func (p *geminiProvider) Generate(ctx context.Context, prompt string) (string, error) {

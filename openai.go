@@ -79,6 +79,13 @@ func (p *openAIProvider) GenerateWithHistory(ctx context.Context, history []Mess
 }
 
 func (p *openAIProvider) chat(ctx context.Context, messages []openai.ChatCompletionMessage) (string, error) {
+	if p.cfg.Stream {
+		return p.chatStream(ctx, messages)
+	}
+	return p.chatSync(ctx, messages)
+}
+
+func (p *openAIProvider) chatSync(ctx context.Context, messages []openai.ChatCompletionMessage) (string, error) {
 	client := p.getClient()
 
 	ctx, cancel := context.WithTimeout(ctx, p.cfg.Timeout)
@@ -98,9 +105,51 @@ func (p *openAIProvider) chat(ctx context.Context, messages []openai.ChatComplet
 		return "", fmt.Errorf("openai: no choices")
 	}
 
-	result := resp.Choices[0].Message.Content
+	return resp.Choices[0].Message.Content, nil
+}
 
-	return result, nil
+func (p *openAIProvider) chatStream(ctx context.Context, messages []openai.ChatCompletionMessage) (string, error) {
+	client := p.getClient()
+
+	ctx, cancel := context.WithTimeout(ctx, p.cfg.Timeout)
+	defer cancel()
+
+	req := openai.ChatCompletionRequest{
+		Model:       p.cfg.Model,
+		Temperature: float32(p.cfg.Temperature),
+		MaxTokens:   p.cfg.MaxTokens,
+		Messages:    messages,
+		Stream:      true,
+	}
+
+	stream, err := client.CreateChatCompletionStream(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("openai: stream create: %w", err)
+	}
+	defer stream.Close()
+
+	var result strings.Builder
+	for {
+		response, err := stream.Recv()
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			if result.Len() > 0 {
+				return result.String(), nil
+			}
+			return "", fmt.Errorf("openai: stream recv: %w", err)
+		}
+		if len(response.Choices) > 0 {
+			result.WriteString(response.Choices[0].Delta.Content)
+		}
+	}
+
+	if result.Len() == 0 {
+		return "", fmt.Errorf("openai: empty stream response")
+	}
+
+	return result.String(), nil
 }
 
 

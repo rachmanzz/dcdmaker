@@ -3,6 +3,7 @@ package dcdmaker
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/sashabaranov/go-openai"
@@ -130,7 +131,7 @@ func (p *openAIProvider) chatStream(ctx context.Context, messages []openai.ChatC
 
 	var result strings.Builder
 	for {
-		response, err := stream.Recv()
+		rawLine, err := stream.RecvRaw()
 		if err != nil {
 			if err.Error() == "EOF" {
 				break
@@ -140,8 +141,9 @@ func (p *openAIProvider) chatStream(ctx context.Context, messages []openai.ChatC
 			}
 			return "", fmt.Errorf("openai: stream recv: %w", err)
 		}
-		if len(response.Choices) > 0 {
-			result.WriteString(response.Choices[0].Delta.Content)
+		content := extractContent(rawLine)
+		if content != "" {
+			result.WriteString(content)
 		}
 	}
 
@@ -150,6 +152,19 @@ func (p *openAIProvider) chatStream(ctx context.Context, messages []openai.ChatC
 	}
 
 	return result.String(), nil
+}
+
+var contentRe = regexp.MustCompile(`"content":"((?:[^"\\]|\\.)*)"`)
+
+func extractContent(rawLine []byte) string {
+	match := contentRe.FindSubmatch(rawLine)
+	if match == nil {
+		return ""
+	}
+	s := string(match[1])
+	s = strings.ReplaceAll(s, `\"`, `"`)
+	s = strings.ReplaceAll(s, `\\`, `\`)
+	return s
 }
 
 

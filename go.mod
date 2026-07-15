@@ -3,7 +3,7 @@ module github.com/rachmanzz/dcdmaker
 go 1.25.8
 
 require (
-	github.com/sashabaranov/go-openai v1.41.2
+	github.com/openai/openai-go/v3 v3.42.0
 	google.golang.org/genai v1.62.0
 )
 
@@ -20,6 +20,10 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.16 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/tidwall/gjson v1.18.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect

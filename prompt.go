@@ -9,6 +9,9 @@ import (
 //go:embed .agents/skills/dcd-documents/SKILL.md
 var dcdSpec string
 
+//go:embed .agents/skills/docx-preprosesor/SKILL.md
+var docxPreprocessorSpec string
+
 func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	var b strings.Builder
 
@@ -47,7 +50,10 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 
 	b.WriteString("=== INSTRUCTION ===\n")
 	b.WriteString("DO NOT use default values. DO NOT assume anything.\n")
-	b.WriteString("Extract ALL values directly from the SOURCE DOCUMENT XML below.\n")
+	b.WriteString("Extract ALL values directly from the SOURCE DOCUMENT below.\n\n")
+	b.WriteString("=== SOURCE DOCUMENT FORMAT ===\n")
+	b.WriteString(docxPreprocessorSpec)
+	b.WriteString("\n\n")
 	b.WriteString("You MUST scan the ENTIRE source document from first paragraph to last paragraph. Do NOT stop early, skip sections, or summarize.\n")
 	b.WriteString("Every single paragraph, table, and list in the source MUST have a corresponding DCD entry in the output.\n\n")
 
@@ -58,9 +64,9 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("If a DCD feature is not documented in the specification, it does not exist — do not use it.\n\n")
 
 	b.WriteString("Task:\n")
-	b.WriteString("- Parse the SOURCE DOCUMENT XML for actual margins (<w:pgMar>), fonts (<w:rFonts>, <w:sz>), headings (<w:pStyle>, <w:b/> combined with size), tables (<w:tbl>), lists (<w:numPr>).\n")
+	b.WriteString("- Parse the SOURCE DOCUMENT for actual margins ([PAGE]), fonts ([DEFAULT] and [P] attributes), headings (<h1>-<h6>), lists ([LI]).\n")
 	b.WriteString("- Match font-family, font-size, margins, page layout, heading hierarchy EXACTLY.\n")
-	b.WriteString("- Every <w:t> text must be preserved in correct order.\n")
+	b.WriteString("- Every text line must be preserved in correct order.\n")
 	b.WriteString("- CRITICAL: Do NOT skip transitional clauses, introductory phrases, exception clauses, or connecting text between sections. Pay EXTRA attention to the FINAL paragraphs. Every sentence must map to DCD.\n")
 	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context. Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n")
 	b.WriteString("- CRITICAL: Do NOT copy all predicted variables into every section. Distribute them based on actual usage per section.\n")

@@ -125,15 +125,17 @@ func (p *geminiProvider) Generate(ctx context.Context, prompt string) (string, e
 }
 
 func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	content, err := extractDocxContent(data)
+	doc, err := ParseDOCX(data)
 	if err != nil {
-		return "", fmt.Errorf("gemini: extract docx: %w", err)
+		return "", fmt.Errorf("gemini: parse docx: %w", err)
 	}
+
+	cleanedContent := doc.FormatForLLM()
 
 	var b bytes.Buffer
 	b.WriteString(prompt)
-	b.WriteString("\n\n=== SOURCE DOCUMENT XML ===\n")
-	b.WriteString(content.DocumentXML)
+	b.WriteString("\n\n=== SOURCE DOCUMENT ===\n")
+	b.WriteString(cleanedContent)
 	b.WriteString("\n\n")
 	return p.generateContent(ctx, []*genai.Part{{Text: b.String()}})
 }

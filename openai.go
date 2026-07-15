@@ -44,15 +44,17 @@ func (p *openAIProvider) Generate(ctx context.Context, prompt string) (string, e
 }
 
 func (p *openAIProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	content, err := extractDocxContent(data)
+	doc, err := ParseDOCX(data)
 	if err != nil {
-		return "", fmt.Errorf("openai: extract docx: %w", err)
+		return "", fmt.Errorf("openai: parse docx: %w", err)
 	}
+
+	cleanedContent := doc.FormatForLLM()
 
 	var b strings.Builder
 	b.WriteString(prompt)
-	b.WriteString("\n\n=== SOURCE DOCUMENT XML ===\n")
-	b.WriteString(content.DocumentXML)
+	b.WriteString("\n\n=== SOURCE DOCUMENT ===\n")
+	b.WriteString(cleanedContent)
 	b.WriteString("\n\n")
 	return p.chat(ctx, []openai.ChatCompletionMessageParamUnion{
 		openai.UserMessage(b.String()),

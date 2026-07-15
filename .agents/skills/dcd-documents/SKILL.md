@@ -464,8 +464,8 @@ A variable or key is **EITHER Predictable OR Unpredictable**. It MUST NEVER be b
 
 ```ini
 [object-unpredictable]
-founders[]=name, address
-info=name, address
+founders[]=name, address # Array of objects (prefix with [])
+info=name, address # Single object mapping
 
 [keys-unpredictable]
 birthplace, birthday

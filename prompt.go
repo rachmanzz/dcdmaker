@@ -15,7 +15,9 @@ var docxPreprocessorSpec string
 func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	var b strings.Builder
 
-	b.WriteString("Output ONLY raw DCD template syntax, no explanations, no markdown wrapping.\n\n")
+	b.WriteString("Output ONLY raw DCD template syntax, no explanations, no markdown wrapping.\n")
+	b.WriteString("CRITICAL: Do NOT include, repeat, or echo back any part of the SOURCE DOCUMENT (<words> XML) below.\n")
+	b.WriteString("The source document is input only — never copy it into your response.\n\n")
 
 	b.WriteString("=== DCD DSL SPECIFICATION ===\n")
 	b.WriteString(dcdSpec)

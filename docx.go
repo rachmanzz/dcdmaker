@@ -790,8 +790,11 @@ type docTxbxContent struct {
 }
 
 type ThemeData struct {
-	Bg string
-	Fg string
+	Bg     string
+	Fg     string
+	Font   string
+	FontEA string
+	FontCS string
 }
 
 type aTheme struct {
@@ -799,7 +802,23 @@ type aTheme struct {
 }
 
 type aThemeElements struct {
-	ClrScheme *aClrScheme `xml:"http://schemas.openxmlformats.org/drawingml/2006/main clrScheme"`
+	ClrScheme  *aClrScheme  `xml:"http://schemas.openxmlformats.org/drawingml/2006/main clrScheme"`
+	FontScheme *aFontScheme `xml:"http://schemas.openxmlformats.org/drawingml/2006/main fontScheme"`
+}
+
+type aFontScheme struct {
+	Major *aFontCollection `xml:"http://schemas.openxmlformats.org/drawingml/2006/main majorFont"`
+	Minor *aFontCollection `xml:"http://schemas.openxmlformats.org/drawingml/2006/main minorFont"`
+}
+
+type aFontCollection struct {
+	Latin *aTextTypeface `xml:"http://schemas.openxmlformats.org/drawingml/2006/main latin"`
+	EA    *aTextTypeface `xml:"http://schemas.openxmlformats.org/drawingml/2006/main ea"`
+	CS    *aTextTypeface `xml:"http://schemas.openxmlformats.org/drawingml/2006/main cs"`
+}
+
+type aTextTypeface struct {
+	Typeface string `xml:"typeface,attr"`
 }
 
 type aClrScheme struct {
@@ -1278,8 +1297,25 @@ func ParseDOCX(data []byte) (*ParsedDocument, error) {
 	if len(themeXML) > 0 {
 		var theme aTheme
 		if err := xml.Unmarshal(themeXML, &theme); err == nil {
-			if theme.ThemeElements != nil && theme.ThemeElements.ClrScheme != nil {
+			if theme.ThemeElements != nil {
 				td := &ThemeData{}
+				if fs := theme.ThemeElements.FontScheme; fs != nil {
+					mf := fs.Minor
+					if mf == nil {
+						mf = fs.Major
+					}
+					if mf != nil {
+						if mf.Latin != nil && mf.Latin.Typeface != "" {
+							td.Font = mf.Latin.Typeface
+						}
+						if mf.EA != nil && mf.EA.Typeface != "" {
+							td.FontEA = mf.EA.Typeface
+						}
+						if mf.CS != nil && mf.CS.Typeface != "" {
+							td.FontCS = mf.CS.Typeface
+						}
+					}
+				}
 				if cs := theme.ThemeElements.ClrScheme; cs != nil {
 					if cs.Dk1 != nil && cs.Dk1.SrgbClr != nil {
 						td.Fg = cs.Dk1.SrgbClr.Val
@@ -1288,9 +1324,29 @@ func ParseDOCX(data []byte) (*ParsedDocument, error) {
 						td.Bg = cs.Lt1.SrgbClr.Val
 					}
 				}
-				if td.Fg != "" || td.Bg != "" {
+				if td.Font != "" || td.FontEA != "" || td.FontCS != "" || td.Fg != "" || td.Bg != "" {
 					doc.Theme = td
 				}
+			}
+		}
+	}
+
+	if def, ok := styleMap["default"]; ok && doc.Theme != nil {
+		if def.Family != "" {
+			doc.Theme.Font = def.Family
+		}
+		if def.FontEA != "" {
+			doc.Theme.FontEA = def.FontEA
+		}
+		if def.FontCS != "" {
+			doc.Theme.FontCS = def.FontCS
+		}
+	} else if def, ok := styleMap["default"]; ok && doc.Theme == nil {
+		if def.Family != "" || def.FontEA != "" || def.FontCS != "" {
+			doc.Theme = &ThemeData{
+				Font:   def.Family,
+				FontEA: def.FontEA,
+				FontCS: def.FontCS,
 			}
 		}
 	}
@@ -1904,6 +1960,8 @@ func buildStyleMap(stylesXML []byte) (map[string]StyleDef, map[string]string, []
 				} else if rp.RFonts.HAnsi != "" {
 					def.Family = rp.RFonts.HAnsi
 				}
+				def.FontEA = rp.RFonts.EastAsia
+				def.FontCS = rp.RFonts.CS
 			}
 			if rp.Sz != nil {
 				def.SizePt = halfPtToPt(rp.Sz.Val)
@@ -2335,11 +2393,9 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 		}
 		if r.RunTab != nil {
 			pp.Runs = append(pp.Runs, TextRun{IsTab: true})
-			continue
 		}
 		if r.LastRenderedPageBreak != nil {
 			pp.Runs = append(pp.Runs, TextRun{IsPageBreak: true})
-			continue
 		}
 
 		if r.RunSym != nil {
@@ -2349,19 +2405,15 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 					pp.Runs = append(pp.Runs, TextRun{IsSym: true, SymChar: rune(c)})
 				}
 			}
-			continue
 		}
 		if r.NoBreakHyphen != nil {
 			pp.Runs = append(pp.Runs, TextRun{IsNoBreakHyphen: true})
-			continue
 		}
 		if r.SoftHyphen != nil {
 			pp.Runs = append(pp.Runs, TextRun{IsSoftHyphen: true})
-			continue
 		}
 		if r.CR != nil {
 			pp.Runs = append(pp.Runs, TextRun{IsCarriageReturn: true})
-			continue
 		}
 		if r.Drawing != nil || r.Pict != nil {
 			tr := TextRun{IsImage: true}
@@ -2467,19 +2519,15 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 						pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsSym: true, SymChar: rune(c)})
 					}
 				}
-				continue
 			}
 			if r.NoBreakHyphen != nil {
 				pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsNoBreakHyphen: true})
-				continue
 			}
 			if r.SoftHyphen != nil {
 				pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsSoftHyphen: true})
-				continue
 			}
 			if r.CR != nil {
 				pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsCarriageReturn: true})
-				continue
 			}
 			tr := TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date}
 			tr = applyRunProps(r, tr)
@@ -2504,19 +2552,15 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 						pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsSym: true, SymChar: rune(c)})
 					}
 				}
-				continue
 			}
 			if r.NoBreakHyphen != nil {
 				pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsNoBreakHyphen: true})
-				continue
 			}
 			if r.SoftHyphen != nil {
 				pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsSoftHyphen: true})
-				continue
 			}
 			if r.CR != nil {
 				pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsCarriageReturn: true})
-				continue
 			}
 			tr := TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date}
 			tr = applyRunProps(r, tr)
@@ -2547,19 +2591,15 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 						tr.Text += string(rune(c))
 					}
 				}
-				continue
 			}
 			if r.NoBreakHyphen != nil {
 				tr.Text += "\u2011"
-				continue
 			}
 			if r.SoftHyphen != nil {
 				tr.Text += "\u00AD"
-				continue
 			}
 			if r.CR != nil {
 				tr.Text += "\n"
-				continue
 			}
 			for _, t := range r.RunText {
 				tr.Text += t.Text
@@ -2719,9 +2759,7 @@ func detectCodeBlock(pp *ParsedParagraph, styleMap map[string]StyleDef, styleNam
 		}
 	}
 	font := strings.ToLower(pp.FontFamily)
-	if font == "courier new" || font == "consolas" || font == "lucida console" ||
-		font == "menlo" || font == "monaco" || font == "monospace" ||
-		strings.Contains(font, "mono") || strings.Contains(font, "courier") {
+	if font == "consolas" || font == "menlo" || font == "monaco" {
 		pp.IsCode = true
 	}
 }
@@ -2958,6 +2996,15 @@ func (doc *ParsedDocument) GenerateStyleBlock() string {
 
 	if doc.Theme != nil {
 		b.WriteString(`  <s:theme`)
+		if doc.Theme.Font != "" {
+			b.WriteString(fmt.Sprintf(` font="%s"`, xmlEscape(doc.Theme.Font)))
+		}
+		if doc.Theme.FontEA != "" {
+			b.WriteString(fmt.Sprintf(` fontEA="%s"`, xmlEscape(doc.Theme.FontEA)))
+		}
+		if doc.Theme.FontCS != "" {
+			b.WriteString(fmt.Sprintf(` fontCS="%s"`, xmlEscape(doc.Theme.FontCS)))
+		}
 		if doc.Theme.Fg != "" {
 			b.WriteString(fmt.Sprintf(` fg="%s"`, doc.Theme.Fg))
 		}

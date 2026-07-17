@@ -124,13 +124,16 @@ Links to `<table id="n">` via `ref` attribute (1-based document order).
 `el` = target element, `pos` = position (in declared unit), `align` = alignment,
 `leader` = leader character style.
 
-### `<s:theme>` — Color Tokens
+### `<s:theme>` — Global Defaults (Font + Color Tokens)
 
 ```xml
-<s:theme fg="000000" bg="FFFFFF"/>
+<s:theme font="Calibri" fontEA="SimSun" fontCS="Courier New" fg="000000" bg="FFFFFF"/>
 ```
 
-Optional color scheme from `theme/theme1.xml`. `fg` = dk1 (text), `bg` = lt1 (background).
+Optional global defaults resolved from `w:docDefaults` + theme fontScheme in `theme/theme1.xml`.
+`font` = Latin/ASCII font, `fontEA` = East Asian font, `fontCS` = Complex Script font.
+`fg` = dk1 (text color), `bg` = lt1 (background color).
+Priority: inline run > style definition > global default.
 
 ### `<s:custom>` — Custom Style Definition
 

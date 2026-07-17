@@ -265,12 +265,15 @@ func TestFormatForLLM_Theme(t *testing.T) {
 	doc := &ParsedDocument{
 		Mode: "semantic",
 		Theme: &ThemeData{
-			Fg: "000000",
-			Bg: "FFFFFF",
+			Font:   "Calibri",
+			FontEA: "SimSun",
+			FontCS: "Calibri",
+			Fg:     "000000",
+			Bg:     "FFFFFF",
 		},
 	}
 	out := doc.FormatForLLM()
-	assertContains(t, out, `<s:theme fg="000000" bg="FFFFFF"`)
+	assertContains(t, out, `<s:theme font="Calibri" fontEA="SimSun" fontCS="Calibri" fg="000000" bg="FFFFFF"`)
 }
 
 func TestFormatForLLM_CodeBlock(t *testing.T) {

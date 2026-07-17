@@ -333,7 +333,7 @@ func TestFormatForLLM_HeaderFooter(t *testing.T) {
 		},
 	}
 	out := doc.FormatForLLM()
-	assertContains(t, out, `<header id="1">`)
+	assertContains(t, out, `<header id="1" type="default">`)
 	assertContains(t, out, `<p>Page Header</p>`)
 	assertContains(t, out, `</header>`)
 }

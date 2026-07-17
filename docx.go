@@ -89,6 +89,7 @@ type ParsedDocument struct {
 	PageLayout    PageLayout
 	DefaultFont   FontDef
 	LineHeight    float64
+	LineRule      string
 	Title         string
 	Subject       string
 	Author        string
@@ -214,6 +215,7 @@ type TextRun struct {
 	InsID          int
 	InsAuthor      string
 	InsDate        string
+	SpacePreserve  bool
 }
 
 type BorderInfo struct {
@@ -268,6 +270,7 @@ type ParsedParagraph struct {
 	IsCode             bool
 	IsQuote            bool
 	Lang               string
+	VAlign             string
 	TabStops           []TabStopDef
 }
 
@@ -639,6 +642,7 @@ type paraProps struct {
 	AutoSpaceDE     *struct{} `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main autoSpaceDE"`
 	AutoSpaceDN     *struct{} `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main autoSpaceDN"`
 	Bidi            *struct{}  `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main bidi"`
+	TextAlignment   *strVal    `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main textAlignment"`
 	SectPr          *docSection `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main sectPr"`
 }
 
@@ -724,7 +728,8 @@ type docHyperlink struct {
 }
 
 type docText struct {
-	Text string `xml:",chardata"`
+	Text  string `xml:",chardata"`
+	Space string `xml:"http://www.w3.org/XML/1998/namespace space,attr"`
 }
 
 type docDrawing struct {
@@ -1131,6 +1136,7 @@ func ParseDOCX(data []byte) (*ParsedDocument, error) {
 			if styles.DocDefaults != nil && styles.DocDefaults.ParaPropsDefault != nil {
 				pp := styles.DocDefaults.ParaPropsDefault.ParaProps
 				if pp != nil && pp.Spacing != nil && pp.Spacing.Line > 0 {
+					doc.LineRule = pp.Spacing.LineRule
 					lineInPt := float64(pp.Spacing.Line) / 20.0
 					switch pp.Spacing.LineRule {
 					case "auto":
@@ -2047,6 +2053,9 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 		if p.ParaProps.JC != nil {
 			pp.Align = p.ParaProps.JC.Val
 		}
+		if p.ParaProps.TextAlignment != nil {
+			pp.VAlign = p.ParaProps.TextAlignment.Val
+		}
 		if p.ParaProps.Ind != nil {
 			pp.IndentLeft = parseTwipsToInches(p.ParaProps.Ind.Left)
 			pp.IndentRight = parseTwipsToInches(p.ParaProps.Ind.Right)
@@ -2312,6 +2321,9 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 		tr = applyRunProps(r, tr)
 		for _, t := range r.RunText {
 			tr.Text += t.Text
+			if t.Space == "preserve" {
+				tr.SpacePreserve = true
+			}
 		}
 		if r.FootnoteRef != nil {
 			tr.IsFootnoteRef = true
@@ -2336,6 +2348,9 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 			tr = applyRunProps(r, tr)
 			for _, t := range r.RunText {
 				tr.Text += t.Text
+				if t.Space == "preserve" {
+					tr.SpacePreserve = true
+				}
 			}
 			if tr.Text != "" {
 				pp.Runs = append(pp.Runs, tr)
@@ -2349,6 +2364,9 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 			tr = applyRunProps(r, tr)
 			for _, t := range r.DelText {
 				tr.Text += t.Text
+				if t.Space == "preserve" {
+					tr.SpacePreserve = true
+				}
 			}
 			if tr.Text != "" {
 				pp.Runs = append(pp.Runs, tr)
@@ -2366,6 +2384,9 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 		for _, r := range hl.Runs {
 			for _, t := range r.RunText {
 				tr.Text += t.Text
+				if t.Space == "preserve" {
+					tr.SpacePreserve = true
+				}
 			}
 		}
 		if tr.Text != "" {
@@ -2672,7 +2693,12 @@ var standardSizes = []pageSize{
 	{"legal", 8.5, 14},
 	{"A3", 11.69, 16.54},
 	{"A5", 5.83, 8.27},
+	{"A6", 4.13, 5.83},
 	{"B5", 6.93, 9.84},
+	{"tabloid", 11, 17},
+	{"executive", 7.5, 10},
+	{"statement", 5.5, 8.5},
+	{"folio", 8.5, 13},
 }
 
 func approxEqual(a, b float64) bool {
@@ -2714,10 +2740,14 @@ func (doc *ParsedDocument) GenerateStyleBlock() string {
 	if lh <= 0 {
 		lh = 1.5
 	}
-	b.WriteString(fmt.Sprintf(`  <s:line el="p" value="%.1f" rule="auto"/>`, lh))
+	rule := doc.LineRule
+	if rule == "" {
+		rule = "auto"
+	}
+	b.WriteString(fmt.Sprintf(`  <s:line el="p" value="%.1f" rule="%s"/>`, lh, rule))
 	b.WriteString("\n")
 
-	for level := 1; level <= 6; level++ {
+	for level := 1; level <= 9; level++ {
 		hs, ok := doc.HeadingStyles[level]
 		if !ok {
 			continue
@@ -2838,6 +2868,9 @@ func (doc *ParsedDocument) GenerateStyleBlock() string {
 
 	for _, def := range doc.CustomStyles {
 		b.WriteString(fmt.Sprintf(`  <s:custom name="%s"`, xmlEscape(def.Name)))
+		if def.Type != "" {
+			b.WriteString(fmt.Sprintf(` type="%s"`, def.Type))
+		}
 		if def.BasedOn != "" {
 			if name, ok := resolveBasedOnName(def.BasedOn, doc.CustomStyles); ok {
 				b.WriteString(fmt.Sprintf(` basedOn="%s"`, xmlEscape(name)))
@@ -2996,16 +3029,19 @@ func (doc *ParsedDocument) FormatForLLM() string {
 
 	b.WriteString(doc.GenerateStyleBlock())
 
-	b.WriteString("<write>\n")
-
 	sections := doc.Sections
 	if len(sections) == 0 {
 		sections = []ParsedSection{{Content: doc.Content}}
 	}
 	var hdrFtrID int
-	for i, sec := range sections {
+	for _, sec := range sections {
 		emitHdrFtrBlock(&b, "header", sec.Headers, doc, &hdrFtrID)
 		emitHdrFtrBlock(&b, "footer", sec.Footers, doc, &hdrFtrID)
+	}
+
+	b.WriteString("<write>\n")
+
+	for i, sec := range sections {
 		if i > 0 {
 			b.WriteString(`<section-break`)
 			if sec.BreakType != "" {
@@ -3014,9 +3050,6 @@ func (doc *ParsedDocument) FormatForLLM() string {
 			if sec.Layout.FromDocx {
 				layout := detectLayout(sec.Layout.WidthInch, sec.Layout.HeightInch)
 				b.WriteString(fmt.Sprintf(` layout="%s"`, layout))
-			}
-			if sec.ColCount > 1 {
-				b.WriteString(fmt.Sprintf(` columns="%d"`, sec.ColCount))
 			}
 			b.WriteString("/>\n")
 		}
@@ -3151,6 +3184,9 @@ func writeParagraphAttrs(b *strings.Builder, p *ParsedParagraph) {
 	if p.Lang != "" {
 		fmt.Fprintf(b, ` lang="%s"`, p.Lang)
 	}
+	if p.VAlign != "" {
+		fmt.Fprintf(b, ` valign="%s"`, p.VAlign)
+	}
 	if p.StyleName != "" {
 		fmt.Fprintf(b, ` c="%s"`, xmlEscape(p.StyleName))
 	}
@@ -3178,7 +3214,7 @@ func buildPlainText(p ParsedParagraph) string {
 			b.WriteString(xmlEscape(r.Text))
 		}
 	}
-	return strings.TrimSpace(b.String())
+	return b.String()
 }
 
 func borderValToStyle(val string) string {
@@ -3433,7 +3469,7 @@ func emitHdrFtrBlock(b *strings.Builder, xmlTag string, items []ParsedHdrFtr, do
 	for _, hf := range items {
 		*idCounter++
 		fmt.Fprintf(b, `<%s id="%d"`, xmlTag, *idCounter)
-		if hf.Type != "" && hf.Type != "default" {
+		if hf.Type != "" {
 			fmt.Fprintf(b, ` type="%s"`, hf.Type)
 		}
 		b.WriteString(">\n")
@@ -3510,9 +3546,6 @@ func buildInlineText(p ParsedParagraph, mode string) string {
 			b.WriteString(fmt.Sprintf(`<a href="%s">%s</a>`, xmlEscape(r.HyperlinkURL), xmlEscape(r.Text)))
 			continue
 		}
-		if r.Hidden {
-			continue
-		}
 		if r.IsFootnoteRef {
 			b.WriteString(fmt.Sprintf(`<fn-ref id="%d" type="footnote"/>`, r.NoteID))
 			continue
@@ -3561,6 +3594,14 @@ func buildInlineText(p ParsedParagraph, mode string) string {
 		}
 		if r.Highlight != "" && r.Highlight != "none" {
 			spanAttrs += fmt.Sprintf(` highlight="%s"`, r.Highlight)
+			hasSpan = true
+		}
+		if r.Hidden {
+			spanAttrs += ` hidden="true"`
+			hasSpan = true
+		}
+		if r.Language != "" {
+			spanAttrs += fmt.Sprintf(` lang="%s"`, r.Language)
 			hasSpan = true
 		}
 
@@ -3614,7 +3655,20 @@ func buildInlineText(p ParsedParagraph, mode string) string {
 		b.WriteString(t)
 	}
 
-	text := strings.TrimSpace(b.String())
+	text := b.String()
+	hasPreserve := false
+	for _, r := range p.Runs {
+		if r.SpacePreserve {
+			hasPreserve = true
+			break
+		}
+	}
+	if !hasPreserve && mode == "semantic" {
+		text = collapseSpaces(text)
+	}
+	if !hasPreserve {
+		text = strings.TrimSpace(text)
+	}
 
 	if uniformBold {
 		text = "<b>" + text + "</b>"
@@ -3640,6 +3694,12 @@ func buildInsAttrs(r TextRun) string {
 	return attrs
 }
 
+var reMultiSpace = regexp.MustCompile(`  +`)
+
+func collapseSpaces(s string) string {
+	return reMultiSpace.ReplaceAllString(s, " ")
+}
+
 func xmlEscape(s string) string {
 	s = sanitizeForbiddenXMLChars(s)
 	s = strings.ReplaceAll(s, "&", "&amp;")
@@ -3657,7 +3717,11 @@ func sanitizeForbiddenXMLChars(s string) string {
 			b.WriteRune(r)
 			continue
 		}
-		if r >= 0x20 && r != 0x7F {
+		if r >= 0x20 && r <= 0x7E {
+			b.WriteRune(r)
+			continue
+		}
+		if r >= 0x85 {
 			b.WriteRune(r)
 			continue
 		}

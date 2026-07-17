@@ -192,10 +192,15 @@ type TextRun struct {
 	FontCS         string
 	SizeCS         float64
 	BreakType      string
-	IsTab          bool
-	IsLineBreak    bool
-	IsPageBreak    bool
-	IsImage        bool
+	IsTab              bool
+	IsLineBreak        bool
+	IsPageBreak        bool
+	IsImage            bool
+	IsSym              bool
+	SymChar            rune
+	IsNoBreakHyphen    bool
+	IsSoftHyphen       bool
+	IsCarriageReturn   bool
 	ImageSrc       string
 	ImageWidth     float64
 	ImageHeight    float64
@@ -235,6 +240,7 @@ type ParsedParagraph struct {
 	SpacingBefore      float64
 	SpacingAfter       float64
 	LineHeight         float64
+	LineRule           string
 	Bold               bool
 	Italic             bool
 	FontFamily         string
@@ -353,6 +359,11 @@ type borderVal struct {
 	Color string `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main color,attr"`
 	Sz    int    `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main sz,attr"`
 	Space int    `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main space,attr"`
+}
+
+type symVal struct {
+	Font string `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main font,attr"`
+	Char string `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main char,attr"`
 }
 
 type runProps struct {
@@ -694,6 +705,10 @@ type docRun struct {
 	FfData                *ffDataVal  `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main ffData"`
 	FootnoteRef           *noteRef    `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main footnoteReference"`
 	EndnoteRef            *noteRef    `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main endnoteReference"`
+	RunSym                *symVal     `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main sym"`
+	NoBreakHyphen         *struct{}   `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main noBreakHyphen"`
+	SoftHyphen            *struct{}   `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main softHyphen"`
+	CR                    *struct{}   `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main cr"`
 }
 
 type docIns struct {
@@ -1830,15 +1845,33 @@ func buildNumberingMap(data []byte) (map[int]map[int]string, map[int]map[int]int
 
 type StyleDef struct {
 	Family        string
+	FontEA        string
+	FontCS        string
 	SizePt        float64
+	SizeCS        float64
 	Color         string
 	Bold          bool
 	Italic        bool
 	Underline     string
+	Strikethrough bool
+	SmallCaps     bool
+	Uppercase     bool
 	SpacingBefore float64
 	SpacingAfter  float64
+	LineSpacing   float64
+	LineRule      string
 	Align         string
+	IndentLeft    float64
+	IndentRight   float64
+	IndentFirst   float64
+	IndentHanging float64
+	BorderTop     string
 	BorderBottom  string
+	BorderLeft    string
+	BorderRight   string
+	BorderWidth   int
+	BorderColor   string
+	BorderStyle   string
 	HeadingLevel  int
 }
 
@@ -1888,9 +1921,14 @@ func buildStyleMap(stylesXML []byte) (map[string]StyleDef, map[string]string, []
 				} else if s.RunProps.RFonts.HAnsi != "" {
 					sd.Family = s.RunProps.RFonts.HAnsi
 				}
+				sd.FontEA = s.RunProps.RFonts.EastAsia
+				sd.FontCS = s.RunProps.RFonts.CS
 			}
 			if s.RunProps.Sz != nil {
 				sd.SizePt = halfPtToPt(s.RunProps.Sz.Val)
+			}
+			if s.RunProps.SzCs != nil {
+				sd.SizeCS = halfPtToPt(s.RunProps.SzCs.Val)
 			}
 			if s.RunProps.Color != nil && s.RunProps.Color.Val != "" {
 				sd.Color = s.RunProps.Color.Val
@@ -1904,6 +1942,15 @@ func buildStyleMap(stylesXML []byte) (map[string]StyleDef, map[string]string, []
 			if s.RunProps.Uline != nil {
 				sd.Underline = s.RunProps.Uline.Val
 			}
+			if s.RunProps.Strike != nil || s.RunProps.DStrike != nil {
+				sd.Strikethrough = true
+			}
+			if s.RunProps.SmallCaps != nil {
+				sd.SmallCaps = true
+			}
+			if s.RunProps.Caps != nil {
+				sd.Uppercase = true
+			}
 		}
 		
 		// Extract from ParaProps (pPr) - outlineLvl, spacing, alignment, borders
@@ -1915,16 +1962,54 @@ func buildStyleMap(stylesXML []byte) (map[string]StyleDef, map[string]string, []
 				sd.Align = s.ParaProps.JC.Val
 			}
 			if s.ParaProps.Spacing != nil {
-				// before/after in twips → pt (twips/20)
 				if s.ParaProps.Spacing.Before > 0 {
 					sd.SpacingBefore = float64(s.ParaProps.Spacing.Before) / 20.0
 				}
 				if s.ParaProps.Spacing.After > 0 {
 					sd.SpacingAfter = float64(s.ParaProps.Spacing.After) / 20.0
 				}
+				if s.ParaProps.Spacing.Line > 0 {
+					lineInPt := float64(s.ParaProps.Spacing.Line) / 20.0
+					sd.LineRule = s.ParaProps.Spacing.LineRule
+					switch s.ParaProps.Spacing.LineRule {
+					case "auto":
+						sd.LineSpacing = float64(s.ParaProps.Spacing.Line) / 240.0
+					case "exact", "atLeast":
+						sd.LineSpacing = lineInPt / 11.0
+					default:
+						sd.LineSpacing = lineInPt / 11.0
+					}
+				}
 			}
-			if s.ParaProps.PBdr != nil && s.ParaProps.PBdr.Bottom != nil {
-				sd.BorderBottom = s.ParaProps.PBdr.Bottom.Val
+			if s.ParaProps.Ind != nil {
+				if s.ParaProps.Ind.Left > 0 {
+					sd.IndentLeft = parseTwipsToInches(s.ParaProps.Ind.Left)
+				}
+				if s.ParaProps.Ind.Right > 0 {
+					sd.IndentRight = parseTwipsToInches(s.ParaProps.Ind.Right)
+				}
+				if s.ParaProps.Ind.FirstLine > 0 {
+					sd.IndentFirst = parseTwipsToInches(s.ParaProps.Ind.FirstLine)
+				}
+				if s.ParaProps.Ind.Hanging > 0 {
+					sd.IndentHanging = parseTwipsToInches(s.ParaProps.Ind.Hanging)
+				}
+			}
+			if s.ParaProps.PBdr != nil {
+				if s.ParaProps.PBdr.Top != nil && s.ParaProps.PBdr.Top.Val != "none" && s.ParaProps.PBdr.Top.Val != "" {
+					sd.BorderTop = s.ParaProps.PBdr.Top.Val
+					sd.BorderStyle = s.ParaProps.PBdr.Top.Val
+					sd.BorderWidth = s.ParaProps.PBdr.Top.Sz
+					sd.BorderColor = s.ParaProps.PBdr.Top.Color
+				}
+				if s.ParaProps.PBdr.Bottom != nil && s.ParaProps.PBdr.Bottom.Val != "none" && s.ParaProps.PBdr.Bottom.Val != "" {
+					sd.BorderBottom = s.ParaProps.PBdr.Bottom.Val
+					if sd.BorderStyle == "" {
+						sd.BorderStyle = s.ParaProps.PBdr.Bottom.Val
+						sd.BorderWidth = s.ParaProps.PBdr.Bottom.Sz
+						sd.BorderColor = s.ParaProps.PBdr.Bottom.Color
+					}
+				}
 			}
 		}
 		
@@ -2065,6 +2150,7 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 		if p.ParaProps.Spacing != nil {
 			if p.ParaProps.Spacing.Line > 0 {
 				lineInPt := float64(p.ParaProps.Spacing.Line) / 20.0
+				pp.LineRule = p.ParaProps.Spacing.LineRule
 				switch p.ParaProps.Spacing.LineRule {
 				case "auto":
 					pp.LineHeight = float64(p.ParaProps.Spacing.Line) / 240.0
@@ -2247,6 +2333,27 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 			continue
 		}
 
+		if r.RunSym != nil {
+			charCode := r.RunSym.Char
+			if len(charCode) >= 4 && len(charCode) <= 6 {
+				if c, err := strconv.ParseInt(charCode, 16, 32); err == nil {
+					pp.Runs = append(pp.Runs, TextRun{IsSym: true, SymChar: rune(c)})
+				}
+			}
+			continue
+		}
+		if r.NoBreakHyphen != nil {
+			pp.Runs = append(pp.Runs, TextRun{IsNoBreakHyphen: true})
+			continue
+		}
+		if r.SoftHyphen != nil {
+			pp.Runs = append(pp.Runs, TextRun{IsSoftHyphen: true})
+			continue
+		}
+		if r.CR != nil {
+			pp.Runs = append(pp.Runs, TextRun{IsCarriageReturn: true})
+			continue
+		}
 		if r.Drawing != nil || r.Pict != nil {
 			tr := TextRun{IsImage: true}
 			if r.Drawing != nil {
@@ -2344,6 +2451,27 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 
 	for _, ins := range p.Ins {
 		for _, r := range ins.Runs {
+			if r.RunSym != nil {
+				charCode := r.RunSym.Char
+				if len(charCode) >= 4 && len(charCode) <= 6 {
+					if c, err := strconv.ParseInt(charCode, 16, 32); err == nil {
+						pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsSym: true, SymChar: rune(c)})
+					}
+				}
+				continue
+			}
+			if r.NoBreakHyphen != nil {
+				pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsNoBreakHyphen: true})
+				continue
+			}
+			if r.SoftHyphen != nil {
+				pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsSoftHyphen: true})
+				continue
+			}
+			if r.CR != nil {
+				pp.Runs = append(pp.Runs, TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date, IsCarriageReturn: true})
+				continue
+			}
 			tr := TextRun{IsIns: true, InsID: ins.ID, InsAuthor: ins.Author, InsDate: ins.Date}
 			tr = applyRunProps(r, tr)
 			for _, t := range r.RunText {
@@ -2360,6 +2488,27 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 
 	for _, del := range p.Del {
 		for _, r := range del.Runs {
+			if r.RunSym != nil {
+				charCode := r.RunSym.Char
+				if len(charCode) >= 4 && len(charCode) <= 6 {
+					if c, err := strconv.ParseInt(charCode, 16, 32); err == nil {
+						pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsSym: true, SymChar: rune(c)})
+					}
+				}
+				continue
+			}
+			if r.NoBreakHyphen != nil {
+				pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsNoBreakHyphen: true})
+				continue
+			}
+			if r.SoftHyphen != nil {
+				pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsSoftHyphen: true})
+				continue
+			}
+			if r.CR != nil {
+				pp.Runs = append(pp.Runs, TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date, IsCarriageReturn: true})
+				continue
+			}
 			tr := TextRun{IsDel: true, InsID: del.ID, InsAuthor: del.Author, InsDate: del.Date}
 			tr = applyRunProps(r, tr)
 			for _, t := range r.DelText {
@@ -2382,6 +2531,27 @@ func parseDocParagraph(p docPara, styleMap map[string]StyleDef, styleNameMap map
 			tr.HyperlinkURL = path
 		}
 		for _, r := range hl.Runs {
+			if r.RunSym != nil {
+				charCode := r.RunSym.Char
+				if len(charCode) >= 4 && len(charCode) <= 6 {
+					if c, err := strconv.ParseInt(charCode, 16, 32); err == nil {
+						tr.Text += string(rune(c))
+					}
+				}
+				continue
+			}
+			if r.NoBreakHyphen != nil {
+				tr.Text += "\u2011"
+				continue
+			}
+			if r.SoftHyphen != nil {
+				tr.Text += "\u00AD"
+				continue
+			}
+			if r.CR != nil {
+				tr.Text += "\n"
+				continue
+			}
 			for _, t := range r.RunText {
 				tr.Text += t.Text
 				if t.Space == "preserve" {
@@ -2802,11 +2972,27 @@ func (doc *ParsedDocument) GenerateStyleBlock() string {
 		}
 	}
 
+	lineSeen := make(map[string]bool)
 	indentSeen := make(map[string]bool)
 	alignSeen := make(map[string]bool)
 	tabSeen := make(map[string]bool)
 
 	walkContent(doc.Content, func(p *ParsedParagraph) {
+		if p.LineHeight > 0 && (p.LineHeight != doc.LineHeight || p.LineRule != doc.LineRule) {
+			el := "p"
+			if p.HeadingLevel > 0 {
+				el = fmt.Sprintf("h%d", p.HeadingLevel)
+			}
+			lr := p.LineRule
+			if lr == "" {
+				lr = "auto"
+			}
+			key := fmt.Sprintf("%s|%.1f|%s", el, p.LineHeight, lr)
+			if !lineSeen[key] {
+				lineSeen[key] = true
+				b.WriteString(fmt.Sprintf(`  <s:line el="%s" value="%.1f" rule="%s"/>`+"\n", el, p.LineHeight, lr))
+			}
+		}
 		if p.IndentLeft != 0 || p.IndentRight != 0 || p.FirstLineIndent != 0 || p.Hanging != 0 {
 			key := fmt.Sprintf("%.4f|%.4f|%.4f|%.4f", p.IndentLeft, p.IndentRight, p.FirstLineIndent, p.Hanging)
 			if indentSeen[key] {
@@ -2879,8 +3065,17 @@ func (doc *ParsedDocument) GenerateStyleBlock() string {
 		if def.Family != "" {
 			b.WriteString(fmt.Sprintf(` font="%s"`, def.Family))
 		}
+		if def.FontEA != "" {
+			b.WriteString(fmt.Sprintf(` fontEA="%s"`, def.FontEA))
+		}
+		if def.FontCS != "" {
+			b.WriteString(fmt.Sprintf(` fontCS="%s"`, def.FontCS))
+		}
 		if def.SizePt > 0 {
 			b.WriteString(fmt.Sprintf(` size="%.0f"`, def.SizePt))
+		}
+		if def.SizeCS > 0 {
+			b.WriteString(fmt.Sprintf(` sizeCS="%.0f"`, def.SizeCS))
 		}
 		if def.Color != "" {
 			b.WriteString(fmt.Sprintf(` color="%s"`, strings.TrimPrefix(def.Color, "#")))
@@ -2894,6 +3089,15 @@ func (doc *ParsedDocument) GenerateStyleBlock() string {
 		if def.Underline != "" {
 			b.WriteString(fmt.Sprintf(` underline="%s"`, def.Underline))
 		}
+		if def.Strikethrough {
+			b.WriteString(` strikethrough="true"`)
+		}
+		if def.SmallCaps {
+			b.WriteString(` smallCaps="true"`)
+		}
+		if def.Uppercase {
+			b.WriteString(` uppercase="true"`)
+		}
 		if def.Align != "" {
 			b.WriteString(fmt.Sprintf(` alignment="%s"`, def.Align))
 		}
@@ -2902,6 +3106,34 @@ func (doc *ParsedDocument) GenerateStyleBlock() string {
 		}
 		if def.SpacingAfter > 0 {
 			b.WriteString(fmt.Sprintf(` spacingAfter="%.2f"`, def.SpacingAfter))
+		}
+		if def.LineSpacing > 0 {
+			lr := def.LineRule
+			if lr == "" {
+				lr = "auto"
+			}
+			b.WriteString(fmt.Sprintf(` lineSpacing="%.1f" lineRule="%s"`, def.LineSpacing, lr))
+		}
+		if def.IndentLeft > 0 {
+			b.WriteString(fmt.Sprintf(` indentLeft="%s"`, marginValue(def.IndentLeft)))
+		}
+		if def.IndentRight > 0 {
+			b.WriteString(fmt.Sprintf(` indentRight="%s"`, marginValue(def.IndentRight)))
+		}
+		if def.IndentFirst > 0 {
+			b.WriteString(fmt.Sprintf(` indentFirst="%s"`, marginValue(def.IndentFirst)))
+		}
+		if def.IndentHanging > 0 {
+			b.WriteString(fmt.Sprintf(` indentHanging="%s"`, marginValue(def.IndentHanging)))
+		}
+		if def.BorderStyle != "" {
+			b.WriteString(fmt.Sprintf(` borderStyle="%s"`, def.BorderStyle))
+			if def.BorderWidth > 0 {
+				b.WriteString(fmt.Sprintf(` borderWidth="%d"`, def.BorderWidth))
+			}
+			if def.BorderColor != "" {
+				b.WriteString(fmt.Sprintf(` borderColor="%s"`, strings.TrimPrefix(def.BorderColor, "#")))
+			}
 		}
 		b.WriteString("/>\n")
 	}
@@ -3205,6 +3437,22 @@ func buildPlainText(p ParsedParagraph) string {
 		}
 		if r.IsTab {
 			b.WriteString("\t")
+			continue
+		}
+		if r.IsSym && r.SymChar != 0 {
+			b.WriteRune(r.SymChar)
+			continue
+		}
+		if r.IsNoBreakHyphen {
+			b.WriteString("\u2011")
+			continue
+		}
+		if r.IsSoftHyphen {
+			b.WriteString("\u00AD")
+			continue
+		}
+		if r.IsCarriageReturn {
+			b.WriteString("\n")
 			continue
 		}
 		if r.IsField || r.Hidden {
@@ -3516,6 +3764,22 @@ func buildInlineText(p ParsedParagraph, mode string) string {
 		}
 		if r.IsPageBreak {
 			b.WriteString("<br type=\"page\"/>")
+			continue
+		}
+		if r.IsSym && r.SymChar != 0 {
+			b.WriteRune(r.SymChar)
+			continue
+		}
+		if r.IsNoBreakHyphen {
+			b.WriteString("\u2011")
+			continue
+		}
+		if r.IsSoftHyphen {
+			b.WriteString("\u00AD")
+			continue
+		}
+		if r.IsCarriageReturn {
+			b.WriteString("<br/>")
 			continue
 		}
 		if r.IsImage {

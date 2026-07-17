@@ -32,7 +32,7 @@ Records of deliberate architectural decisions vs accidental leftovers.
 **Reason:** Prevent LLM hallucination of layout/margin/font values. LLM focuses on body content only.
 **Files:** `docx.go:GenerateStyleBlock()`, `maker.go` (prepend logic)
 
-### Opsi A: Reference Style + Code Override
+### Option A: Reference Style + Code Override
 
 **Date:** 2026-07-16
 **Decision:** `FormatForLLM()` outputs `=== DOCUMENT STYLE ===` with full `[style]` block for AI reference, then `=== DOCUMENT CONTENT ===` with body.

@@ -258,8 +258,8 @@ After `</write>`, before `</words>`:
 ```xml
 <words xmlns="urn:words:v1" xmlns:s="urn:words:v1:style" version="1.0.1" mode="semantic">
   <meta>
-    <title>Akta Pendirian</title>
-    <author>Notaris John</author>
+    <title>Sample Document</title>
+    <author>John Smith</author>
   </meta>
   <style unit="in">
     <s:page size="A4" mt="0.79" mb="0.79" ml="0.79" mr="0.79" mh="0.50" mf="0.50"/>
@@ -267,10 +267,10 @@ After `</write>`, before `</words>`:
     <s:gap el="h" c="Heading1" before="0.25" after="0.17"/>
   </style>
   <write>
-    <h1>AKTA PENDIRIAN PERSEROAN TERBATAS</h1>
-    <p>1. .... .........., lahir di ....</p>
+    <h1>ARTICLES OF INCORPORATION</h1>
+    <p>1. .... .........., born in ....</p>
     <ul type="bullet">
-      <li>Perseroan didirikan untuk jangka waktu tidak terbatas.</li>
+      <li>The company is established for an indefinite period.</li>
     </ul>
   </write>
 </words>

@@ -1,25 +1,25 @@
-# Plan: XML Cleaner untuk DCD Maker
+# Plan: XML Cleaner for DCD Maker
 
 ## Status: PENDING APPROVAL
 
 ## Problem
 
-Raw DOCX XML yang di-inject ke LLM terlalu besar:
+Raw DOCX XML injected into the LLM is too large:
 
 | Metric | Value |
 |---|---|
 | DOCX file (compressed) | 59,284 bytes |
 | `word/document.xml` (uncompressed) | 1,471,576 bytes (1.4MB) |
-| Estimated tokens dari XML | ~367,872 tokens |
+| Estimated tokens from XML | ~367,872 tokens |
 | Plain text tokens | ~13,352 tokens |
 | **Multiplier** | **28x** |
 | Model context window | 262,144 tokens |
 
-XML alone sudah melebihi context window model. Ini menyebabkan context length mencapai 262K tokens.
+XML alone exceeds the model context window. This causes context length to reach 262K tokens.
 
 ## Root Cause
 
-DOCX XML berisi 66,060 tags termasuk:
+DOCX XML contains 66,060 tags including:
 - 7,252 `w:rPr` (run properties/formatting)
 - 7,252 `w:rFonts` (font definitions)
 - 5,698 `w:proofErr` (proofing errors)
@@ -30,23 +30,23 @@ DOCX XML berisi 66,060 tags termasuk:
 - 413 `w:tabs` (tab stops)
 - 390 `w:widowControl`, `w:autoSpaceDE/DN`, `w:adjustRightInd`
 
-Setiap karakter teks dibungkus bertingkat: `<w:p><w:r><w:rPr>...<w:rPr><w:t>teks</w:t></w:r></w:p>` — 5-10x overhead per karakter.
+Each text character is wrapped hierarchically: `<w:p><w:r><w:rPr>...<w:rPr><w:t>text</w:t></w:r></w:p>` — 5-10x overhead per character.
 
-## Proposed Solution: DOCX Parser di `docx.go`
+## Proposed Solution: DOCX Parser in `docx.go`
 
 ### Approach
 
-Parse DOCX XML + `styles.xml`, extract structured data yang dibutuhkan LLM untuk generate DCD. Output cleaned structured text, bukan raw XML.
+Parse DOCX XML + `styles.xml`, extract structured data needed by the LLM to generate DCD. Output cleaned structured text, not raw XML.
 
 ### What to Extract
 
-| Info | Sumber | DCD Mapping |
+| Info | Source | DCD Mapping |
 |---|---|---|
 | Page layout | `document.xml` → `w:pgSz` | `[style] layout=A4, w, h` |
 | Margins | `document.xml` → `w:pgMar` | `[style] m-t, m-r, m-b, m-l` |
 | Default font | `styles.xml` → `w:docDefaults` | `[style] font-family, font-size` |
 | Heading level | `styles.xml` → `w:outlineLvl` | `<h1>`-`<h6>` |
-| Paragraph style | `document.xml` → `w:pStyle` | Map ke style properties |
+| Paragraph style | `document.xml` → `w:pStyle` | Map to style properties |
 | Alignment | `document.xml` → `w:jc` | `align=center/justify` |
 | Indentation | `document.xml` → `w:ind` | `indent=X, hanging=Y` |
 | Bold | `document.xml` → `w:b` | `<b>` |

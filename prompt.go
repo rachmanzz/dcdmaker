@@ -66,16 +66,15 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("If a DCD feature is not documented in the specification, it does not exist — do not use it.\n\n")
 
 	b.WriteString("Task:\n")
-	b.WriteString("- Use the `<style>` block as the exact reference for page layout, margins, fonts, and line-height.\n")
+	b.WriteString("- Use the source document's `<style>` block (from `<words>` XML) as the reference for page layout, margins, fonts, and line-height.\n")
 	b.WriteString("- Parse the `<write>` content for paragraphs (`<p>`), headings (`<h1>`-`<h9>`), lists (`<ul>`/`<ol>`/`<li>`), alignment, and formatting.\n")
-	b.WriteString("- Match font-family, font-size, heading hierarchy EXACTLY.\n")
-	b.WriteString("- CRITICAL: Do NOT generate a `[style]` section. The `[style]` block will be added automatically.\n")
+	b.WriteString("- Match font-family, font-size, heading hierarchy EXACTLY from the source `<style>` block.\n")
 	b.WriteString("- Every text line must be preserved in correct order.\n")
 	b.WriteString("- CRITICAL: Do NOT skip transitional clauses, introductory phrases, exception clauses, or connecting text between sections. Pay EXTRA attention to the FINAL paragraphs. Every sentence must map to DCD.\n")
 	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context. Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n")
 	b.WriteString("- CRITICAL: Do NOT copy all predicted variables into every section. Distribute them based on actual usage per section.\n")
 	b.WriteString("- CRITICAL: If source contains multiple distinct entries needing different formatting, use separate source arrays or separate sections.\n")
-	b.WriteString("- Organize content into `[section]` blocks with proper var/keys declarations for the main document. Use [object-unpredictable] and [keys-unpredictable] only for truly one-off fields that don't logically belong to any regular section.\n\n")
+	b.WriteString("- Organize content into `[section N]` blocks with proper var/keys declarations. Use `[object-unpredictable]` and `[keys-unpredictable]` only for fields not in the predictable data.\n\n")
 
 	if len(predictableKeys) > 0 {
 		b.WriteString("=== FORBIDDEN IN UNPREDICTABLE ===\n")

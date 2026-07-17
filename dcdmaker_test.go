@@ -1311,8 +1311,12 @@ keys=title
 --- BODY ---
 <p>{{info.title}}</p>
 `
-	if err := validateVarsAndKeys(dcd); err != nil {
+	warnings, err := validateVarsAndKeys(dcd)
+	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
+	}
+	if len(warnings) > 0 {
+		t.Fatalf("expected no warnings, got: %v", warnings)
 	}
 }
 
@@ -1326,7 +1330,8 @@ keys=title
 <p>{{info.title}}</p>
 <p>{{info.missing_field}}</p>
 `
-	if err := validateVarsAndKeys(dcd); err == nil {
+	_, err := validateVarsAndKeys(dcd)
+	if err == nil {
 		t.Fatal("expected error for missing field")
 	}
 }
@@ -1343,8 +1348,45 @@ keys=title
 <col>{{x.nama}}</col>
 </loop>
 `
-	if err := validateVarsAndKeys(dcd); err == nil {
+	_, err := validateVarsAndKeys(dcd)
+	if err == nil {
 		t.Fatal("expected error for undeclared var 'pendiri'")
+	}
+}
+
+func TestValidateVarsAndKeysLoopIterVar(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info, []pendiri
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+<loop x from pendiri>
+<col>{{x.nama}}</col>
+</loop>
+`
+	_, err := validateVarsAndKeys(dcd)
+	if err != nil {
+		t.Fatalf("expected no error for loop iter var 'x', got: %v", err)
+	}
+}
+
+func TestValidateVarsAndKeysUnusedVarWarning(t *testing.T) {
+	dcd := `[section 0]
+name=test
+var=info, []unused_items
+keys=title
+
+--- BODY ---
+<p>{{info.title}}</p>
+`
+	warnings, err := validateVarsAndKeys(dcd)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("expected 1 warning for unused var, got %d: %v", len(warnings), warnings)
 	}
 }
 

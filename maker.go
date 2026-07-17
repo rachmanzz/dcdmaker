@@ -173,9 +173,6 @@ func (m *Maker) generate(data []byte) (string, error) {
 	}
 
 	originalPrompt := buildPrompt(m.userPrompt, m.predictableKeys)
-	if styleBlock != "" {
-		originalPrompt += "\n\nCRITICAL: Do NOT generate a [style] section. The [style] block will be added automatically.\n"
-	}
 	prompt := originalPrompt
 	ctx := context.Background()
 
@@ -225,7 +222,14 @@ func (m *Maker) generate(data []byte) (string, error) {
 
 			valid, reason := isDCDValid(result)
 			if valid {
-				if err := validateVarsAndKeys(result); err != nil {
+				warnings, err := validateVarsAndKeys(result)
+				if debug && len(warnings) > 0 {
+					for _, w := range warnings {
+						fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: warning: %s\n",
+							provider.Name(), attempt+1, w)
+					}
+				}
+				if err != nil {
 					lastErr = fmt.Errorf("%s attempt %d: %w", provider.Name(), attempt+1, err)
 					if debug {
 						fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validation failed: %s\n",

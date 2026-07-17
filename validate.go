@@ -18,6 +18,7 @@ var (
 	reVarField      = regexp.MustCompile(`\{\{(\w+)\.(\w+)\}\}`)
 	rePlainVar      = regexp.MustCompile(`\{\{(\w+)\}\}`)
 	reLoopFrom      = regexp.MustCompile(`<loop(?::\w+)?(?:\s+[^\s=]+=[^\s]+)*\s+\w+\s+from\s+(\w+)>`)
+	reLoopIter      = regexp.MustCompile(`<loop(?::\w+)?(?:\s+[^\s=]+=[^\s]+)*\s+(\w+)\s+from\s+\w+>`)
 )
 
 func parseSections(dcd string) []sectionInfo {
@@ -110,9 +111,10 @@ func scanBody(dcd string) []bodyUsage {
 	return out
 }
 
-func validateVarsAndKeys(dcd string) error {
+func validateVarsAndKeys(dcd string) (warnings []string, err error) {
 	sections := parseSections(dcd)
 	usages := scanBody(dcd)
+	loopIterVars := collectLoopIterVars(dcd)
 
 	declaredVars := map[string][]string{} // varName -> [field1, field2, ...]
 	declaredKeys := map[string]bool{}
@@ -129,9 +131,10 @@ func validateVarsAndKeys(dcd string) error {
 			errs = append(errs, fmt.Sprintf("section %q has %d keys (max 15)", s.Name, len(s.Keys)))
 		}
 		for _, v := range s.Vars {
-			if _, ok := declaredVars[v]; !ok {
-				declaredVars[v] = nil
-				declaredVarList = append(declaredVarList, v)
+			name := strings.TrimPrefix(v, "[]")
+			if _, ok := declaredVars[name]; !ok {
+				declaredVars[name] = nil
+				declaredVarList = append(declaredVarList, name)
 			}
 		}
 		for _, k := range s.Keys {
@@ -161,11 +164,14 @@ func validateVarsAndKeys(dcd string) error {
 
 	for _, v := range declaredVarList {
 		if !usedVars[v] {
-			errs = append(errs, fmt.Sprintf("declared var %q is not used in body", v))
+			warnings = append(warnings, fmt.Sprintf("declared var %q is not used in body", v))
 		}
 	}
 
 	for v := range usedVars {
+		if loopIterVars[v] {
+			continue
+		}
 		if _, ok := declaredVars[v]; !ok {
 			errs = append(errs, fmt.Sprintf("var %q used in body is not declared in any [section] var=", v))
 		} else {
@@ -188,9 +194,17 @@ func validateVarsAndKeys(dcd string) error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("dcd validation:\n  - %s", strings.Join(errs, "\n  - "))
+		return warnings, fmt.Errorf("dcd validation:\n  - %s", strings.Join(errs, "\n  - "))
 	}
-	return nil
+	return warnings, nil
+}
+
+func collectLoopIterVars(dcd string) map[string]bool {
+	result := map[string]bool{}
+	for _, m := range reLoopIter.FindAllStringSubmatch(dcd, -1) {
+		result[m[1]] = true
+	}
+	return result
 }
 
 func isLoopVarInSection(v string, sections []sectionInfo) bool {

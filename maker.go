@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -65,7 +66,6 @@ type Maker struct {
 	source          string
 	userPrompt      string
 	predictableKeys []KeyDef
-	lastProvider    string
 	lastResult      string
 	maxRetries      int
 }
@@ -98,10 +98,6 @@ func (m *Maker) MaxRetries(n int) *Maker {
 	}
 	m.maxRetries = n
 	return m
-}
-
-func (m *Maker) LastProvider() string {
-	return m.lastProvider
 }
 
 func (m *Maker) LastResult() string {
@@ -165,7 +161,16 @@ func (m *Maker) Run(output string) error {
 }
 
 func (m *Maker) generate(data []byte) (string, error) {
+	var styleBlock string
+	parsedDoc, parseErr := ParseDOCX(data)
+	if parseErr == nil {
+		styleBlock = parsedDoc.GenerateStyleBlock()
+	}
+
 	originalPrompt := buildPrompt(m.userPrompt, m.predictableKeys)
+	if styleBlock != "" {
+		originalPrompt += "\n\nCRITICAL: Do NOT generate a [style] section. The [style] block will be added automatically.\n"
+	}
 	prompt := originalPrompt
 	ctx := context.Background()
 
@@ -191,14 +196,22 @@ func (m *Maker) generate(data []byte) (string, error) {
 			}
 
 			if debug {
-				rawPath := fmt.Sprintf("dcd_debug_%s_attempt_%d_raw.dcd", provider.Name(), attempt+1)
+				os.MkdirAll("dcd_temp", 0755)
+				rawPath := filepath.Join("dcd_temp", fmt.Sprintf("dcd_debug_%s_attempt_%d_raw.dcd", provider.Name(), attempt+1))
 				os.WriteFile(rawPath, []byte(result), 0644)
 				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: raw output saved to %s (%d bytes)\n",
 					provider.Name(), attempt+1, rawPath, len(result))
 			}
 
 			result = sanitizeDCD(result)
+			if styleBlock != "" {
+				result = stripStyleBlock(result)
+			}
 			result = fixUnpredictableOverlap(result, m.predictableKeys)
+
+			if styleBlock != "" {
+				result = styleBlock + "\n\n" + result
+			}
 
 			if debug {
 				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validating...\n",
@@ -207,7 +220,14 @@ func (m *Maker) generate(data []byte) (string, error) {
 
 			valid, reason := isDCDValid(result)
 			if valid {
-				m.lastProvider = provider.Name()
+				if err := validateVarsAndKeys(result); err != nil {
+					lastErr = fmt.Errorf("%s attempt %d: %w", provider.Name(), attempt+1, err)
+					if debug {
+						fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validation failed: %s\n",
+							provider.Name(), attempt+1, err)
+					}
+					continue
+				}
 				m.lastResult = result
 				return result, nil
 			}
@@ -216,7 +236,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 			if debug {
 				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: %s\n",
 					provider.Name(), attempt+1, reason)
-				sanPath := fmt.Sprintf("dcd_debug_%s_attempt_%d_sanitized.dcd", provider.Name(), attempt+1)
+				sanPath := filepath.Join("dcd_temp", fmt.Sprintf("dcd_debug_%s_attempt_%d_sanitized.dcd", provider.Name(), attempt+1))
 				os.WriteFile(sanPath, []byte(result), 0644)
 			}
 
@@ -242,6 +262,16 @@ func (m *Maker) generate(data []byte) (string, error) {
 	}
 
 	return "", fmt.Errorf("dcdmaker: no providers configured")
+}
+
+func writeWordsXMLDebug(name string, content string) {
+	if os.Getenv("WORDS_DEBUG") != "true" {
+		return
+	}
+	os.MkdirAll("dcd_temp", 0755)
+	fpath := filepath.Join("dcd_temp", fmt.Sprintf("words_xml_%s.xml", name))
+	os.WriteFile(fpath, []byte(content), 0644)
+	fmt.Fprintf(os.Stderr, "[words-debug] saved words XML to %s (%d bytes)\n", fpath, len(content))
 }
 
 

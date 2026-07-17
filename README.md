@@ -8,36 +8,6 @@ AI-powered DCD template generator. Parses source documents (DOCX) and generates 
 go get github.com/rachmanzz/dcdmaker
 ```
 
-## CLI Usage
-
-```bash
-# Generate template from invoice
-dcdmaker -source invoice.docx -output templates/invoice.dcd \
-    -prompt "Create invoice template with number, date, customer, items, total"
-
-# Custom Gemini model
-dcdmaker -source contract.docx -output contract.dcd \
-    -gemini-model gemini-2.5-pro-exp-03-25
-
-# OpenAI-compatible (Ollama, vLLM, LocalAI, Groq, etc.)
-dcdmaker -source doc.docx -output doc.dcd \
-    -openai-model llama3 \
-    -openai-base-url http://localhost:11434/v1 \
-    -openai-key ollama \
-    -no-gemini
-
-# Multi-provider fallback (Gemini → OpenAI)
-dcdmaker -source invoice.docx -output invoice.dcd \
-    -gemini-model gemini-2.5-flash \
-    -openai-model gpt-4o
-
-# Resume interrupted session
-dcdmaker -source invoice.docx -output invoice.dcd -resume
-
-# Install CLI
-go install github.com/rachmanzz/dcdmaker/cmd/dcdmaker@latest
-```
-
 ## Library Usage
 
 ```go
@@ -59,14 +29,12 @@ func main() {
         ),
     )
 
-    // Write to file (supports resume)
     maker.
         Source("invoice.docx").
         OptionalPrompt("Create invoice template with number, date, customer, items, total").
-        Resume(true).
         Run("templates/invoice.dcd")
 
-    // Or get raw string (no file write, no resume)
+    // Or get raw string (no file write)
     dcd, err := maker.Generate()
 }
 ```
@@ -202,11 +170,10 @@ DOCX ──> dcdmaker ──> AI (Gemini / OpenAI) ──> .dcd template
 ```
 
 1. **Read** — Source document loaded from disk
-2. **Send** — Raw `word/document.xml` from DOCX sent to AI (both providers)
-3. **Generate** — AI produces DCD template based on document structure
-4. **Validate** — Output checked for balanced tags, valid DCD syntax
+2. **Parse** — DOCX parsed into structured format: layout, margins, fonts, headings, paragraphs
+3. **Generate** — AI produces DCD template based on structured source, with `[style]` generated deterministically by code
+4. **Validate** — Output checked for valid DCD structure
 5. **Retry** — 3 attempts per provider, fallback to next provider
-6. **Resume** — Session state persisted for recovery on truncation
 
 ## Output: `.dcd` Template
 

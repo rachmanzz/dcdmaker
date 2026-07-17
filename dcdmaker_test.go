@@ -6,6 +6,526 @@ import (
 	"testing"
 )
 
+// Helper: check if s contains substr
+func assertContains(t *testing.T, s, substr string) {
+	t.Helper()
+	if !strings.Contains(s, substr) {
+		t.Errorf("expected output to contain:\n  %s\n\nfull output:\n%s", substr, s)
+	}
+}
+
+func assertNotContains(t *testing.T, s, substr string) {
+	t.Helper()
+	if strings.Contains(s, substr) {
+		t.Errorf("expected output NOT to contain:\n  %s\n\nfull output:\n%s", substr, s)
+	}
+}
+
+func TestFormatForLLM_BasicParagraph(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch:  8.27,
+			HeightInch: 11.69,
+			MarginTop:  0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{{Text: "Hello world"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<words xmlns="urn:words:v1"`)
+	assertContains(t, out, `version="1.0.1"`)
+	assertContains(t, out, `mode="semantic"`)
+	assertContains(t, out, `<p>Hello world</p>`)
+	assertContains(t, out, `<s:page`)
+	assertContains(t, out, `</style>`)
+	assertContains(t, out, `<write>`)
+	assertContains(t, out, `</write>`)
+}
+
+func TestFormatForLLM_Headings(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				HeadingLevel: 1, Runs: []TextRun{{Text: "Chapter 1"}},
+			}},
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				HeadingLevel: 2, Runs: []TextRun{{Text: "Section A"}},
+			}},
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				HeadingLevel: 3, Runs: []TextRun{{Text: "Subsection"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<h1>Chapter 1</h1>`)
+	assertContains(t, out, `<h2>Section A</h2>`)
+	assertContains(t, out, `<h3>Subsection</h3>`)
+}
+
+func TestFormatForLLM_InlineFormatting(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{
+					{Text: "bold and ", Bold: true},
+					{Text: "italic", Italic: true},
+				},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<b>bold and </b>`)
+	assertContains(t, out, `<i>italic</i>`)
+}
+
+func TestFormatForLLM_List(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				IsList: true, ListLevel: 0,
+				ListFormat: "bullet",
+				Runs:     []TextRun{{Text: "Item one"}},
+			}},
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				IsList: true, ListLevel: 0,
+				ListFormat: "bullet",
+				Runs:     []TextRun{{Text: "Item two"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<ul`)
+	assertContains(t, out, `<li>Item one</li>`)
+	assertContains(t, out, `<li>Item two</li>`)
+	assertContains(t, out, `</ul>`)
+}
+
+func TestFormatForLLM_Table(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentTable, Table: &ParsedTable{
+				ID: 1,
+				Grid: []float64{144, 288},
+				Rows: []ParsedTableRow{
+					{IsHeader: true, Cells: []ParsedTableCell{
+						{Content: []ContentItem{{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+							Runs: []TextRun{{Text: "Name"}},
+						}}}},
+						{Content: []ContentItem{{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+							Runs: []TextRun{{Text: "Value"}},
+						}}}},
+					}},
+				},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<table id="1" cols="2"`)
+	assertContains(t, out, `<th><p>Name</p></th>`)
+	assertContains(t, out, `<th><p>Value</p></th>`)
+}
+
+func TestFormatForLLM_StyleBlock(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		LineHeight: 1.5,
+		HeadingStyles: map[int]StyleDef{
+			1: {SpacingBefore: 144, SpacingAfter: 72},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<s:page`)
+	assertContains(t, out, `<s:line el="p" value="1.5" rule="auto"`)
+	assertContains(t, out, `<s:gap el="h" c="Heading1"`)
+}
+
+func TestFormatForLLM_Meta(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode:     "semantic",
+		Title:    "Test Doc",
+		Author:   "Tester",
+		Language: "en-US",
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<title>Test Doc</title>`)
+	assertContains(t, out, `<author>Tester</author>`)
+	assertContains(t, out, `<language>en-US</language>`)
+}
+
+func TestFormatForLLM_Notes(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		Notes: []NoteItem{
+			{Type: "footnote", ID: 1, Body: []ContentItem{
+				{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+					Runs: []TextRun{{Text: "Note body"}},
+				}},
+			}},
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{{Text: "Some text"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<notes>`)
+	assertContains(t, out, `<fn id="1" type="footnote">`)
+	assertContains(t, out, `<p>Note body</p>`)
+	assertContains(t, out, `</notes>`)
+}
+
+func TestFormatForLLM_LosslessModeInsDel(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "lossless",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{
+					{Text: "keep "},
+					{Text: "added", IsIns: true, InsID: 1, InsAuthor: "user1", InsDate: "2024-01-01"},
+					{Text: " "},
+					{Text: "removed", IsDel: true, InsID: 2, InsAuthor: "user2", InsDate: "2024-01-02"},
+				},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `mode="lossless"`)
+	assertContains(t, out, `<ins id="1" author="user1" date="2024-01-01">added</ins>`)
+	assertContains(t, out, `<del id="2" author="user2" date="2024-01-02">removed</del>`)
+	assertContains(t, out, `keep `)
+}
+
+func TestFormatForLLM_SemanticModeSkipsDel(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{
+					{Text: "keep "},
+					{Text: "added", IsIns: true},
+					{Text: " "},
+					{Text: "removed", IsDel: true},
+				},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `mode="semantic"`)
+	assertContains(t, out, `<p>keep added</p>`)
+	assertNotContains(t, out, `<del`)
+	assertNotContains(t, out, `<ins`)
+}
+
+func TestFormatForLLM_Theme(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		Theme: &ThemeData{
+			Fg: "000000",
+			Bg: "FFFFFF",
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<s:theme fg="000000" bg="FFFFFF"`)
+}
+
+func TestFormatForLLM_CodeBlock(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				IsCode: true,
+				Runs:   []TextRun{{Text: "func main() {\n\treturn\n}"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<pre>func main() {`)
+}
+
+func TestFormatForLLM_BlockQuote(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				IsQuote: true,
+				Runs:    []TextRun{{Text: "A wise quote"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<blockquote>A wise quote</blockquote>`)
+}
+
+func TestFormatForLLM_HeaderFooter(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Sections: []ParsedSection{
+			{
+				Layout: PageLayout{WidthInch: 8.27, HeightInch: 11.69},
+				Headers: []ParsedHdrFtr{
+					{Type: "default", Content: []ContentItem{
+						{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+							Runs: []TextRun{{Text: "Page Header"}},
+						}},
+					}},
+				},
+			},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<header id="1">`)
+	assertContains(t, out, `<p>Page Header</p>`)
+	assertContains(t, out, `</header>`)
+}
+
+func TestFormatForLLM_SectionBreak(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{{Text: "First section"}},
+			}},
+		},
+		Sections: []ParsedSection{
+			{Layout: PageLayout{WidthInch: 8.27, HeightInch: 11.69, FromDocx: true}},
+			{Layout: PageLayout{WidthInch: 8.27, HeightInch: 11.69, FromDocx: true}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<section-break`)
+}
+
+func TestFormatForLLM_BoldItalicCombined(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Bold: true,
+				Runs: []TextRun{{Text: "entire paragraph bold"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<b>entire paragraph bold</b>`)
+}
+
+func TestFormatForLLM_Breaks(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{
+					{Text: "line1"},
+					{IsLineBreak: true},
+					{Text: "line2"},
+					{IsPageBreak: true},
+					{IsTab: true},
+					{Text: "tabbed"},
+				},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `line1<br/>line2`)
+	assertContains(t, out, `<br type="page"/>`)
+	assertContains(t, out, `<tab/>tabbed`)
+}
+
+func TestFormatForLLM_Hyperlink(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{
+					{IsHyperlink: true, Text: "click here", HyperlinkURL: "https://example.com"},
+				},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<a href="https://example.com">click here</a>`)
+}
+
+func TestFormatForLLM_ImagePlaceholder(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{
+					{IsImage: true, ImageAlt: "Logo", ImageSrc: "media/image1.png", ImageWidth: 2.5, ImageHeight: 1.5},
+				},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<img alt="Logo" src="media/image1.png" width="2.50" height="1.50"`)
+}
+
+func TestFormatForLLM_FnRef(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				Runs: []TextRun{
+					{Text: "text"},
+					{IsFootnoteRef: true, NoteID: 1},
+				},
+			}},
+		},
+		Notes: []NoteItem{
+			{Type: "footnote", ID: 1},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<fn-ref id="1" type="footnote"`)
+}
+
+func TestFormatForLLM_Border(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		PageLayout: PageLayout{
+			WidthInch: 8.27, HeightInch: 11.69,
+			MarginTop: 0.79, MarginRight: 0.79,
+			MarginBottom: 0.79, MarginLeft: 0.79,
+		},
+		Content: []ContentItem{
+			{Type: ContentParagraph, Paragraph: &ParsedParagraph{
+				BorderTop: &BorderInfo{Val: "single", Sz: 12, Color: "000000"},
+				Runs:     []TextRun{{Text: "bordered"}},
+			}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `at="`)
+	assertContains(t, out, `at="bt`)
+}
+
+func TestFormatForLLM_CustomStyle(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		CustomStyles: []CustomStyleDef{
+			{Name: "MyStyle", BasedOn: "", StyleDef: StyleDef{Family: "Arial", SizePt: 12, Bold: true}},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<s:custom name="MyStyle"`)
+	assertContains(t, out, `font="Arial"`)
+	assertContains(t, out, `size="12"`)
+	assertContains(t, out, `bold="true"`)
+}
+
+func TestFormatForLLM_BmInNotes(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+		Notes: []NoteItem{
+			{Type: "bookmark", Name: "sec1"},
+		},
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<bm id="sec1"`)
+}
+
+func TestFormatForLLM_EmptyDoc(t *testing.T) {
+	doc := &ParsedDocument{
+		Mode: "semantic",
+	}
+	out := doc.FormatForLLM()
+	assertContains(t, out, `<words`)
+	assertContains(t, out, `<write>`)
+	assertContains(t, out, `</write>`)
+	assertContains(t, out, `</words>`)
+}
+
 func TestNewMaker(t *testing.T) {
 	m := NewMaker()
 	if m == nil {
@@ -104,7 +624,7 @@ func TestIsDCDValid(t *testing.T) {
 		},
 		{
 			name:  "unbalanced loop",
-			dcd:   "[section 0]\nname=test\nvar=info, items\nkeys=title\n\n--- BODY ---\n<loop x from items>\n<p>{{x.name}}</p>",
+			dcd:   "[section 0]\nname=test\nvar=info, []items\nkeys=title\n\n--- BODY ---\n<loop x from items>\n<p>{{x.name}}</p>",
 			valid: true,
 		},
 		{
@@ -512,6 +1032,7 @@ keys=invoice_no, date, customer, due_date
 name=items
 var=info, items
 keys=title, items.name, items.qty, items.unit_price, items.total
+formats=[items.name:#],[items.qty:#],[items.unit_price:#],[items.total:#]
 
 --- BODY ---
 <table border=1 width=100%>

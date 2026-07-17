@@ -7,18 +7,17 @@ import (
 )
 
 type sectionInfo struct {
-	Name string
-	Vars []string
-	Keys []string
-	Body string
-	raw  string
+	Name    string
+	Vars    []string
+	Keys    []string
+	Formats []string
 }
 
 var (
 	reSectionHeader = regexp.MustCompile(`^\[section(?::next-page)?\s+\d+\]`)
 	reVarField      = regexp.MustCompile(`\{\{(\w+)\.(\w+)\}\}`)
 	rePlainVar      = regexp.MustCompile(`\{\{(\w+)\}\}`)
-	reLoopFrom      = regexp.MustCompile(`<loop(?::\w+)?(?:\s+\w+=\w+)*\s+\w+\s+from\s+(\w+)>`)
+	reLoopFrom      = regexp.MustCompile(`<loop(?::\w+)?(?:\s+[^\s=]+=[^\s]+)*\s+\w+\s+from\s+(\w+)>`)
 )
 
 func parseSections(dcd string) []sectionInfo {
@@ -29,7 +28,7 @@ func parseSections(dcd string) []sectionInfo {
 
 	for _, line := range lines {
 		if reSectionHeader.MatchString(line) {
-			cur = &sectionInfo{raw: line}
+			cur = &sectionInfo{}
 			sections = append(sections, *cur)
 			cur = &sections[len(sections)-1]
 			inBody = false
@@ -53,12 +52,11 @@ func parseSections(dcd string) []sectionInfo {
 				cur.Vars = splitCSV(strings.TrimPrefix(trim, "var="))
 			case strings.HasPrefix(trim, "keys="):
 				cur.Keys = splitCSV(strings.TrimPrefix(trim, "keys="))
+			case strings.HasPrefix(trim, "formats="):
+				cur.Formats = splitCSV(strings.TrimPrefix(trim, "formats="))
 			}
 		} else {
-			if cur.Body != "" {
-				cur.Body += "\n"
-			}
-			cur.Body += line
+			// body line — we only need to scan body globally via scanBody(), not per-section
 		}
 	}
 	return sections
@@ -121,7 +119,15 @@ func validateVarsAndKeys(dcd string) error {
 	var declaredVarList []string
 	var declaredKeyList []string
 
+	var errs []string
+
 	for _, s := range sections {
+		if len(s.Vars) > 3 {
+			errs = append(errs, fmt.Sprintf("section %q has %d vars (max 3)", s.Name, len(s.Vars)))
+		}
+		if len(s.Keys) > 15 {
+			errs = append(errs, fmt.Sprintf("section %q has %d keys (max 15)", s.Name, len(s.Keys)))
+		}
 		for _, v := range s.Vars {
 			if _, ok := declaredVars[v]; !ok {
 				declaredVars[v] = nil
@@ -152,8 +158,6 @@ func validateVarsAndKeys(dcd string) error {
 			loopVars[u.Var] = true
 		}
 	}
-
-	var errs []string
 
 	for _, v := range declaredVarList {
 		if !usedVars[v] {
@@ -265,11 +269,9 @@ func fixUnpredictableOverlap(dcd string, predictableKeys []KeyDef) string {
 	// Fix [keys-unpredictable] — remove key entries matching predicted names
 	if keysStart := strings.Index(result, "[keys-unpredictable]"); keysStart >= 0 {
 		rest := result[keysStart:]
-		endIdx := strings.Index(rest, "\n\n")
+		endIdx := strings.Index(rest, "\n[")
 		if endIdx < 0 {
 			endIdx = len(rest)
-		} else {
-			endIdx += 2 // include the blank line
 		}
 		section := rest[:endIdx]
 

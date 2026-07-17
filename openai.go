@@ -37,12 +37,6 @@ func (p *openAIProvider) getClient() openai.Client {
 	return p.client
 }
 
-func (p *openAIProvider) Generate(ctx context.Context, prompt string) (string, error) {
-	return p.chat(ctx, []openai.ChatCompletionMessageParamUnion{
-		openai.UserMessage(prompt),
-	})
-}
-
 func (p *openAIProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
 	doc, err := ParseDOCX(data)
 	if err != nil {
@@ -50,6 +44,7 @@ func (p *openAIProvider) GenerateWithFile(ctx context.Context, prompt string, _ 
 	}
 
 	cleanedContent := doc.FormatForLLM()
+	writeWordsXMLDebug(p.Name(), cleanedContent)
 
 	var b strings.Builder
 	b.WriteString(prompt)

@@ -35,8 +35,8 @@ func sanitizeDCD(dcd string) string {
 		lines := strings.Split(dcd, "\n")
 		if len(lines) >= 3 && strings.HasPrefix(lines[0], "```") {
 			dcd = strings.Join(lines[1:], "\n")
-			if strings.HasSuffix(dcd, "```") {
-				dcd = strings.TrimSuffix(dcd, "```")
+			if before, ok := strings.CutSuffix(dcd, "```"); ok {
+				dcd = before
 				dcd = strings.TrimSuffix(dcd, "\n")
 			}
 		}
@@ -45,4 +45,24 @@ func sanitizeDCD(dcd string) string {
 	return strings.TrimSpace(dcd)
 }
 
+func stripStyleBlock(dcd string) string {
+	dcd = strings.TrimSpace(dcd)
+	lines := strings.Split(dcd, "\n")
 
+	var out []string
+	skip := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "[style]" {
+			skip = true
+			continue
+		}
+		if skip && strings.HasPrefix(trimmed, "[") {
+			skip = false
+		}
+		if !skip {
+			out = append(out, line)
+		}
+	}
+	return strings.TrimSpace(strings.Join(out, "\n"))
+}

@@ -120,10 +120,6 @@ func (p *geminiProvider) generateContentStream(ctx context.Context, parts []*gen
 	return result.String(), nil
 }
 
-func (p *geminiProvider) Generate(ctx context.Context, prompt string) (string, error) {
-	return p.generateContent(ctx, []*genai.Part{{Text: prompt}})
-}
-
 func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
 	doc, err := ParseDOCX(data)
 	if err != nil {
@@ -131,6 +127,7 @@ func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ 
 	}
 
 	cleanedContent := doc.FormatForLLM()
+	writeWordsXMLDebug(p.Name(), cleanedContent)
 
 	var b bytes.Buffer
 	b.WriteString(prompt)

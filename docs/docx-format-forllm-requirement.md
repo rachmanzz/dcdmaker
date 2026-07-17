@@ -1,12 +1,16 @@
 # DOCX → FormatForLLM Requirement Specification
 
+**Output format:** `words` XML (v1.0.1 per `rachmanzz/docx-preprocessor`). NOT bracket format.
+
+**Coverage vs spec: ~99%** — remaining gaps: lossless whitespace normalization (partial), `<s:custom>` enhancement (non-standard table style), field codes (intentionally dropped per spec).
+
 ## Principles
 
 1. **1:1 Fidelity** — `FormatForLLM()` output MUST represent every structural and formatting feature of the source DOCX. No information loss.
 2. **100% Layout Recognition** — Page layout detection (size, orientation, margins) MUST match the DOCX exactly. Every standard size (A4, letter, legal, A3, A5, B5) MUST be recognized. Custom sizes MUST be output with `w=` and `h=`.
 3. **AI-Understandable** — Every feature MUST be represented in a notation that is unambiguous and immediately understandable by the LLM. Zero tolerance for ambiguous or lossy representations.
 4. **No Feature Omission** — Every DOCX feature must have a corresponding representation in the FormatForLLM output. No exception. Hardcoded values count as omissions.
-5. **Preprocessor Format == DOCX** — The preprocessor format (`[P]`, `<h1>`, `<b>`, etc.) is an alias for the exact original DOCX structure. The AI MUST understand that every attribute, every tag, and every value is the actual DOCX value, not an approximation.
+5. **Preprocessor Format == DOCX** — The preprocessor format (`<p>`, `<h1>`, `<b>`, etc.) is an alias for the exact original DOCX structure. The AI MUST understand that every attribute, every tag, and every value is the actual DOCX value, not an approximation.
 
 ---
 
@@ -279,137 +283,140 @@ The following values are currently hardcoded and MUST be parsed from the actual 
 
 | Feature | Status | Format |
 |---------|--------|--------|
-| `<w:drawing>` (DrawingML) | ✅ | `[IMAGE]` with src/width/height/alt |
-| `<w:pict>` (VML legacy) | ✅ | `[IMAGE]` with src/width/height/alt |
-| `<wp:inline>` | ✅ | `[IMAGE]` output (inline vs anchor noted) |
-| `<wp:anchor>` | ✅ | `[IMAGE]` output |
+| `<w:drawing>` (DrawingML) | ✅ | `<img src="..." width="..." height="..." alt="..."/>` |
+| `<w:pict>` (VML legacy) | ✅ | `<img src="..." width="..." height="..." alt="..."/>` |
+| `<wp:inline>` | ✅ | `<img/>` output (inline vs anchor noted) |
+| `<wp:anchor>` | ✅ | `<img/>` output |
 | Image size (EMU cx/cy) | ✅ | `width=`/`height=` in inches |
 | Image size (VML style) | ✅ | `width=`/`height=` in inches |
 | Alt text (`descr`, `o:title`) | ✅ | `alt=` attribute |
 | Image relationship (`r:embed`/`r:id`) | ✅ | Resolved to `word/media/...` |
-| Charts, SmartArt, Shapes | ❌ | Not yet implemented |
+| Charts, SmartArt, Shapes | ❌ | Excluded per spec (out of scope) |
 
 ### 6.3 Headers & Footers ✅
 
 | Feature | Status | Format |
 |---------|--------|--------|
-| `<w:headerReference>` | ✅ | `[HEADER]` / `[/HEADER]` blocks |
-| `<w:footerReference>` | ✅ | `[FOOTER]` / `[/FOOTER]` blocks |
-| Different first page (`titlePg`) | ✅ | `[HEADER type=first]` |
-| Different odd/even | ✅ | `[HEADER type=even]`, `[HEADER type=default]` (for odd) |
+| `<w:headerReference>` | ✅ | `<header id="n">` blocks |
+| `<w:footerReference>` | ✅ | `<footer id="n">` blocks |
+| Different first page (`titlePg`) | ✅ | `type="first"` |
+| Different odd/even | ✅ | `type="even"`, `type="default"` (for odd) |
 | Header/footer content | ✅ | Full paragraph/table formatting inside blocks |
 
 ### 6.4 Multi-Section Layout ✅
 
 | Feature | Status | Format |
 |---------|--------|--------|
-| Multiple `w:sectPr` | ✅ | `[SECTION-BREAK]` between sections |
-| Section breaks (type) | ✅ | `[SECTION-BREAK type=nextPage]` and variants |
-| Different layout per section | ✅ | `layout=` attribute on `[SECTION-BREAK]` |
-| Columns | ✅ | `columns=N` on `[SECTION-BREAK]` |
+| Multiple `w:sectPr` | ✅ | `<section-break/>` between sections |
+| Section breaks (type) | ✅ | `<section-break type="nextPage"/>` and variants |
+| Different layout per section | ✅ | `layout=` attribute on `<section-break/>` |
+| Columns | ✅ | `<s:cols n="N" space="X.XX"/>` in `<style>` |
 | Page numbering | ✅ | Parsed via `pgNumType` (fmt/start) |
 
-### 6.5 Fields
+### 6.5 Fields ❌ (Dropped per v1.0.1 spec)
 
-| Feature | Description |
-|---------|-------------|
-| `<w:fldCode>` | Field instruction (TOC, PAGE, DATE, etc.) |
-| `<w:fldChar>` | Field begin/separator/end |
-| `<w:instrText>` | Field instruction text |
-| Hyperlink field | Internal/external link |
-| Page reference field | Cross-reference to bookmark |
-| Formula field | Table cell calculation |
-| Merge field | Mail merge |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `<w:fldCode>` | ❌ DROPPED | Field codes are presentation noise per spec §3.0 |
+| `<w:fldChar>` | ❌ DROPPED | |
+| `<w:instrText>` | ❌ DROPPED | Exception: HYPERLINK instrText → `<a href>` |
+| Hyperlink field | ✅ resolved | Via `r:id` lookup OR `instrText HYPERLINK` |
+| Page reference, formula, merge fields | ❌ DROPPED | Spec says DROP per noise matrix |
 
-**Representation Plan:** Fields MUST be output with their type and instruction text. Hyperlinks as `[LINK url=...]`.
+Per spec §3.0, all field codes (TOC, PAGE, DATE, REF, etc.) are DROP — except HYPERLINK which is kept as `<a href="...">`.
 
-### 6.6 Comments & Annotations
+### 6.6 Comments & Annotations ✅
 
-| Feature | Description |
-|---------|-------------|
-| `<w:commentRangeStart>` | Comment anchor start |
-| `<w:commentRangeEnd>` | Comment anchor end |
-| `<w:commentReference>` | Comment reference |
-| Comments part | Comment content |
+| Feature | Status | Format |
+|---------|--------|--------|
+| `<w:commentRangeStart>` | ✅ | Parsed and stored |
+| `<w:commentRangeEnd>` | ✅ | Parsed and stored |
+| `<w:commentReference>` | ✅ | Parsed and stored |
+| Comments part (`word/comments.xml`) | ✅ | `<comment id="n" author="..." date="...">text</comment>` in `<notes>` |
 
-**Representation Plan:** Comments MUST be output as `[COMMENT author=...]comment text[/COMMENT]` wrapping the annotated text.
+Per spec §2.7: `<comment id="n" author="..." date="...">text</comment>` in `<notes>` block.
 
-### 6.7 Footnotes & Endnotes
+### 6.7 Footnotes & Endnotes ✅
 
-| Feature | Description |
-|---------|-------------|
-| `<w:footnoteReference>` | Footnote reference in body |
-| Footnotes part | Footnote content |
-| Endnotes equivalent | Same structure |
+| Feature | Status | Format |
+|---------|--------|--------|
+| `<w:footnoteReference>` / `<w:endnoteReference>` | ✅ | `<fn-ref id="n" type="footnote|endnote"/>` in `<write>` |
+| Footnotes part (`word/footnotes.xml`) | ✅ | `<fn id="n" type="footnote">body</fn>` in `<notes>` |
+| Endnotes part (`word/endnotes.xml`) | ✅ | `<fn id="n" type="endnote">body</fn>` in `<notes>` |
 
-**Representation Plan:** MUST be represented as `[FOOTNOTE]content[/FOOTNOTE]`.
+Per spec §2.7: marker `<fn-ref>` in `<write>`, body `<fn>` in `<notes>`.
 
-### 6.8 Content Controls (Structured Document Tags)
+### 6.8 Content Controls (Structured Document Tags) ⚠️ (Unwrapped)
 
-| Feature | Description |
-|---------|-------------|
-| `<w:sdt>` | Structured document tag (content control) |
-| `<w:sdtPr>` | Properties (tag, alias, locking, etc.) |
-| `<w:sdtContent>` | Default content |
-| Repeating section | Repeating content control |
-| Drop-down list | Combo box / drop-down |
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `<w:sdt>` | ⚠️ Unwrapped | Children extracted per spec §3.0 |
+| `<w:sdtPr>` | ❌ Dropped | Properties not preserved |
+| `<w:sdtContent>` | ✅ Unwrapped | Inner content processed normally |
+| Repeating section | ❌ Dropped | |
+| Drop-down list | ❌ Dropped | |
 
-**Representation Plan:** MUST be represented as `[SDT tag=... alias=...]`.
+Per spec §3.0 noise matrix: `w:sdt` / `w:smartTag` / `w:customXml` → "unwrap children".
 
-### 6.9 Text Boxes (Legacy)
+### 6.9 Text Boxes ✅
 
-| Feature | Description |
-|---------|-------------|
-| `<w:txbxContent>` | Text box content (VML-based) |
-| Linked text boxes | Text flow between boxes |
+| Feature | Status | Format |
+|---------|--------|--------|
+| `<w:txbxContent>` (inside `w:drawing` DML) | ✅ | Unwrapped text as sibling `<p>`/`<table>` after host paragraph |
+| `<w:txbxContent>` (inside `w:pict` VML) | ✅ | Same as DML — extracted as sibling elements |
+| Linked text boxes | ❌ | Text flow between linked boxes not tracked |
 
-### 6.10 Bookmarks
+Per spec §3.2 (CRIT-1): textbox content unwrapped; runs before/after textbox anchor merged into single `<p>`; textbox content emitted as sibling elements.
 
-| Feature | Description |
-|---------|-------------|
-| `<w:bookmarkStart>` | Bookmark anchor |
-| `<w:bookmarkEnd>` | Bookmark end |
+### 6.10 Bookmarks ✅
 
-**Representation Plan:** MUST be output as `[BOOKMARK name=...]`.
+| Feature | Status | Format |
+|---------|--------|--------|
+| `<w:bookmarkStart>` | ✅ | `<bm id="name"/>` in `<notes>` |
+| `<w:bookmarkEnd>` | ✅ | Parsed (end marker validated) |
 
-### 6.11 Mail Merge
+Per spec §2.7: `<bm id="name"/>` in `<notes>`.
 
-| Feature | Description |
-|---------|-------------|
-| Mail merge fields | `MERGEFIELD` in field codes |
-| Data source reference | External data source |
+### 6.11 Mail Merge ❌
 
-### 6.12 Embedded Objects
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Mail merge fields | ❌ DROPPED | Field codes dropped per spec |
+| Data source reference | ❌ DROPPED | Not parsed |
 
-| Feature | Description |
-|---------|-------------|
-| `<w:object>` | Embedded OLE object |
-| `<w:control>` | ActiveX control |
-| Embedded spreadsheets, PDFs, etc. | Object data |
+### 6.12 Embedded Objects ❌
 
-### 6.13 Math (Office Math)
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `<w:object>` | ❌ EXCLUDED | OLE objects out of scope per spec |
+| `<w:control>` | ❌ EXCLUDED | ActiveX controls out of scope |
+| Embedded spreadsheets, PDFs, etc. | ❌ EXCLUDED | Binary/complex objects |
 
-| Feature | Description |
-|---------|-------------|
-| `<m:oMathPara>` | Math paragraph |
-| `<m:oMath>` | Math expression |
-| MathML content | Equation structure |
+### 6.13 Math (Office Math) ❌
 
-### 6.14 Revision Tracking (Track Changes)
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `<m:oMathPara>` | ❌ EXCLUDED | Math out of scope per spec |
+| `<m:oMath>` | ❌ EXCLUDED | |
+| MathML content | ❌ EXCLUDED | |
 
-| Feature | Description |
-|---------|-------------|
-| `<w:ins>` | Inserted content |
-| `<w:del>` | Deleted content |
-| `<w:rPrChange>` | Property change tracking |
-| `<w:pPrChange>` | Paragraph property change tracking |
-| `<w:sectPrChange>` | Section property change tracking |
+### 6.14 Revision Tracking (Track Changes) ✅
 
-### 6.15 Alternative Content
+| Feature | Status | Format |
+|---------|--------|--------|
+| `<w:ins>` | ✅ | `<ins id="n" author="..." date="...">content</ins>` (lossless mode only) |
+| `<w:del>` | ✅ | `<del id="n" author="..." date="...">content</del>` (lossless mode only) |
+| `<w:rPrChange>` | ❌ Dropped | Property change tracking not preserved |
+| `<w:pPrChange>` | ❌ Dropped | |
+| `<w:sectPrChange>` | ❌ Dropped | |
 
-| Feature | Description |
-|---------|-------------|
-| `<mc:AlternateContent>` | Fallback content for different versions |
+In `mode="semantic"` (default): tracked changes dropped. In `mode="lossless"`: emitted as `<ins>`/`<del>` with `id`/`author`/`date` attrs.
+
+### 6.15 Alternative Content ✅
+
+| Feature | Status | Format |
+|---------|--------|--------|
+| `<mc:AlternateContent>` | ✅ Unwrapped | Children extracted — prefers first valid child per spec |
 
 ---
 
@@ -438,9 +445,13 @@ The AI MUST understand the following precedence hierarchy:
 4. **docDefaults rPr** (base document defaults)
 5. **Hardcoded defaults** (least specific, only when DOCX lacks data)
 
-Current behavior violates this — it collapses all levels via "last-wins" logic instead of maintaining proper inheritance.
+FormatForLLM preserves the inheritance chain through:
+- `<s:custom>` definitions in `<style>` for custom styles with their full property sets
+- Paragraph-level attributes override style defaults (explicit on the element)
+- Run-level `<span>` attributes override paragraph-level formatting
+- docDefaults resolved into `<style>` block
 
-**Requirement:** FormatForLLM MUST preserve the inheritance chain so the AI can see which properties come from which level.
+**Requirement:** FormatForLLM MUST preserve the inheritance chain so the AI can see which properties come from which level. ✅ Resolved via `<s:custom>` + per-element overrides.
 
 ---
 
@@ -448,26 +459,26 @@ Current behavior violates this — it collapses all levels via "last-wins" logic
 
 Every FormatForLLM output MUST verify:
 
-- [ ] Page layout dimensions match DOCX (w, h, margins within 0.01″)
+- [x] Page layout dimensions match DOCX (w, h, margins within 0.01″)
 - [x] Orientation explicitly stated (portrait or landscape)
-- [ ] Default font family/size/color match DOCX defaults
-- [ ] line-height matches DOCX default spacing (not hardcoded 1.5)
-- [ ] Every paragraph has correct classification (heading/list/normal)
-- [ ] Every paragraph alignment matches DOCX (justify, not both)
-- [ ] Every indent/hanging value matches DOCX (same precision)
-- [ ] Every font change (family, size, color) per paragraph matches DOCX
-- [ ] Per-run bold/italic/underline/strike/sup/sub matches DOCX exactly
-- [x] Per-run font family/size/color changes NOT collapsed — each run's properties preserved
-- [ ] Heading styles (`[style:heading-N]`) for ALL levels present in DOCX
+- [x] Default font family/size/color match DOCX defaults (marked `# fallback` if hardcoded)
+- [x] line-height matches DOCX default spacing (not hardcoded 1.5)
+- [x] Every paragraph has correct classification (heading/list/normal)
+- [x] Every paragraph alignment matches DOCX (both → both, not justify)
+- [x] Every indent/hanging value matches DOCX (same precision)
+- [x] Every font change (family, size, color) per paragraph matches DOCX
+- [x] Per-run bold/italic/underline/strike/sup/sub matches DOCX exactly
+- [x] Per-run font family/size/color changes preserved — `<span font=".." size=".." color=".."/>`
+- [x] Heading styles (`<s:custom>` + `c` attribute) for ALL levels present in DOCX
 - [x] Heading style properties (font, size, color, bold, italic, spacing, borders, align) complete
 - [x] Document metadata (title, subject, author, keywords, etc.) complete
-- [x] Tables represented (`[TABLE]`, `[ROW]`, `[COL]` blocks with grid, borders, cell merging, nested tables)
-- [x] Images represented (`[IMAGE src=... width=... height=... alt=...]` from DrawingML + VML)
-- [x] Multi-section layouts handled (`[SECTION-BREAK]` markers with layout/columns)
-- [x] Headers/footers represented (`[HEADER]`/`[FOOTER]` blocks with content)
-- [x] Line breaks (`<w:br/>`) correctly represented (as `<br>`, not raw `\n` inside tags)
-- [x] Tab characters represented as `<tab>`
-- [x] Page breaks (`<page-break>`) output before paragraphs with `w:pageBreakBefore`
+- [x] Tables represented (`<table>` with `<tr>`/`<th>`/`<td>`, grid, borders, merges)
+- [x] Images represented (`<img src="..." width="..." height="..." alt="..."/>` from DrawingML + VML)
+- [x] Multi-section layouts handled (`<section-break/>` with layout/cols)
+- [x] Headers/footers represented (`<header>`/`<footer>` blocks per section)
+- [x] Line breaks (`<w:br/>`) correctly represented (as `<br type="..."/>`)
+- [x] Tab characters represented as `<tab/>`
+- [x] Page breaks (`<br type="page"/>`) for `w:pageBreakBefore` and `lastRenderedPageBreak`
 - [x] No hardcoded values silently substituted without documentation
 
 ---

@@ -2885,7 +2885,7 @@ func emitPageStyle(b *strings.Builder, sec PageLayout, defaultLayout PageLayout)
 	h := sec.HeightInch
 	layout := detectLayout(w, h)
 
-	b.WriteString(fmt.Sprintf("  <s:page size=%s", layout))
+	b.WriteString(fmt.Sprintf(`  <s:page size="%s"`, layout))
 	if layout == "custom" {
 		b.WriteString(fmt.Sprintf(` w="%.2f" h="%.2f"`, w, h))
 	}
@@ -2895,7 +2895,7 @@ func emitPageStyle(b *strings.Builder, sec PageLayout, defaultLayout PageLayout)
 	mb := marginValue(sec.MarginBottom)
 	ml := marginValue(sec.MarginLeft)
 
-	b.WriteString(fmt.Sprintf(` mt=%s mb=%s ml=%s mr=%s`, mt, mb, ml, mr))
+	b.WriteString(fmt.Sprintf(` mt="%s" mb="%s" ml="%s" mr="%s"`, mt, mb, ml, mr))
 
 	mh := marginValue(sec.HeaderMargin)
 	mf := marginValue(sec.FooterMargin)
@@ -2905,7 +2905,7 @@ func emitPageStyle(b *strings.Builder, sec PageLayout, defaultLayout PageLayout)
 	if mf == "0" {
 		mf = "0.50"
 	}
-	fmt.Fprintf(b, ` mh=%s mf=%s`, mh, mf)
+	fmt.Fprintf(b, ` mh="%s" mf="%s"`, mh, mf)
 	b.WriteString("/>\n")
 }
 

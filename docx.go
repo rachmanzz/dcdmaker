@@ -1370,16 +1370,25 @@ func assignTableIDs(doc *ParsedDocument) {
 func buildSections(body docBody, docXML []byte, relMap map[string]string, headerContent, footerContent map[string][]ContentItem, styleMap map[string]StyleDef, styleNameMap map[string]string, numberingMap map[int]map[int]string, numberingStartMap map[int]map[int]int, doc *ParsedDocument) ([]ParsedSection, []ContentItem) {
 	var bt struct {
 		Body struct {
-			Inner []xml.Token `xml:",any"`
+			Inner string `xml:",innerxml"`
 		} `xml:"http://schemas.openxmlformats.org/wordprocessingml/2006/main body"`
 	}
 	xml.Unmarshal(docXML, &bt)
+
+	dec := xml.NewDecoder(strings.NewReader("<d xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">" + bt.Body.Inner + "</d>"))
 
 	pi, ti, si := 0, 0, 0
 	var allSections []ParsedSection
 	var curContent []ContentItem
 
-	for _, tok := range bt.Body.Inner {
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			continue
+		}
 		se, ok := tok.(xml.StartElement)
 		if !ok {
 			continue

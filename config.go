@@ -60,12 +60,24 @@ func WithOpenAIModel(m string) OpenAIOption {
 	return func(c *openAIConfig) { c.Model = m }
 }
 
+func WithOpenAITemperature(t float64) OpenAIOption {
+	return func(c *openAIConfig) { c.Temperature = t }
+}
+
 func WithOpenAIAPIKey(k string) OpenAIOption {
 	return func(c *openAIConfig) { c.APIKey = k }
 }
 
+func WithOpenAIMaxTokens(n int) OpenAIOption {
+	return func(c *openAIConfig) { c.MaxTokens = n }
+}
+
 func WithOpenAIBaseURL(u string) OpenAIOption {
 	return func(c *openAIConfig) { c.BaseURL = u }
+}
+
+func WithOpenAITimeout(d time.Duration) OpenAIOption {
+	return func(c *openAIConfig) { c.Timeout = d }
 }
 
 func WithOpenAIStream(s bool) OpenAIOption {

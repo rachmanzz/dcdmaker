@@ -66,6 +66,7 @@ type Maker struct {
 	source          string
 	userPrompt      string
 	predictableKeys []KeyDef
+	lastProvider    string
 	lastResult      string
 	maxRetries      int
 }
@@ -98,6 +99,10 @@ func (m *Maker) MaxRetries(n int) *Maker {
 	}
 	m.maxRetries = n
 	return m
+}
+
+func (m *Maker) LastProvider() string {
+	return m.lastProvider
 }
 
 func (m *Maker) LastResult() string {
@@ -228,6 +233,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 					}
 					continue
 				}
+				m.lastProvider = provider.Name()
 				m.lastResult = result
 				return result, nil
 			}

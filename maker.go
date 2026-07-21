@@ -261,12 +261,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 					break
 				}
 
-				prompt = originalPrompt + fmt.Sprintf(
-					"\n\nThe previous attempt had %d validation errors:\n%s\n"+
-						"Invalid output:\n---\n%s\n---\n\n"+
-						"Regenerate a valid DCD template, fixing ALL the issues above:\n",
-					errCount, err, result,
-				)
+				prompt = originalPrompt + buildRetryFeedback(err, result, attempt)
 				continue
 			}
 

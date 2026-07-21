@@ -896,6 +896,34 @@ func TestValidationErrorCount(t *testing.T) {
 	}
 }
 
+func TestCategorizeErrors(t *testing.T) {
+	err := fmt.Errorf("dcd validation:\n  - section \"final\" has 4 vars (max 3)\n  - field \"tanggal_akta\" of var \"info\" used in body but not in any keys=\n  - var \"loop\" used in body is not declared in any [section] var=")
+	ce := categorizeErrors(err)
+	if len(ce.SectionLimits) != 1 {
+		t.Fatalf("expected 1 section limit error, got %d", len(ce.SectionLimits))
+	}
+	if len(ce.MissingKeys) != 1 {
+		t.Fatalf("expected 1 missing key error, got %d", len(ce.MissingKeys))
+	}
+	if len(ce.UndeclaredVars) != 1 {
+		t.Fatalf("expected 1 undeclared var error, got %d", len(ce.UndeclaredVars))
+	}
+}
+
+func TestBuildRetryFeedback(t *testing.T) {
+	err := fmt.Errorf("dcd validation:\n  - section \"final\" has 4 vars (max 3)\n  - field \"nama\" of var \"info\" used in body but not in any keys=")
+	fb := buildRetryFeedback(err, "[section 0]\nname=final", 0)
+	if !strings.Contains(fb, "SECTION LIMITS VIOLATED") {
+		t.Error("feedback missing section limits section")
+	}
+	if !strings.Contains(fb, "FIELDS USED BUT NOT DECLARED") {
+		t.Error("feedback missing missing keys section")
+	}
+	if !strings.Contains(fb, "§7") {
+		t.Error("feedback missing rule reference")
+	}
+}
+
 
 func TestBuildPromptWithoutPredictableKeys(t *testing.T) {
 	prompt := buildPrompt("hello", nil)

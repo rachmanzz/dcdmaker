@@ -214,6 +214,114 @@ func ValidationErrorCount(err error) int {
 	return strings.Count(err.Error(), "\n  - ")
 }
 
+type CategorizedErrors struct {
+	SectionLimits []string
+	MissingKeys   []string
+	UndeclaredVars []string
+	Other         []string
+}
+
+func categorizeErrors(err error) CategorizedErrors {
+	var ce CategorizedErrors
+	if err == nil {
+		return ce
+	}
+	for _, line := range strings.Split(err.Error(), "\n") {
+		line = strings.TrimSpace(line)
+		line = strings.TrimPrefix(line, "- ")
+		if line == "" || strings.HasPrefix(line, "dcd validation") {
+			continue
+		}
+		switch {
+		case strings.Contains(line, "has ") && strings.Contains(line, "vars (max") ||
+			strings.Contains(line, "has ") && strings.Contains(line, "keys (max"):
+			ce.SectionLimits = append(ce.SectionLimits, line)
+		case strings.Contains(line, "used in body but not in any keys="):
+			ce.MissingKeys = append(ce.MissingKeys, line)
+		case strings.Contains(line, "used in body is not declared"):
+			ce.UndeclaredVars = append(ce.UndeclaredVars, line)
+		default:
+			ce.Other = append(ce.Other, line)
+		}
+	}
+	return ce
+}
+
+func buildRetryFeedback(err error, result string, attempt int) string {
+	ce := categorizeErrors(err)
+	errCount := ValidationErrorCount(err)
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("\n\nThe previous attempt had %d validation error(s):\n\n", errCount))
+
+	if len(ce.SectionLimits) > 0 {
+		b.WriteString("SECTION LIMITS VIOLATED (§7 — max 3 vars, max 15 keys per section):\n")
+		for _, e := range ce.SectionLimits {
+			b.WriteString(fmt.Sprintf("  - %s\n", e))
+		}
+		b.WriteString("FIX: Split the section into multiple [section N] blocks.\n\n")
+	}
+
+	if len(ce.MissingKeys) > 0 {
+		b.WriteString("FIELDS USED BUT NOT DECLARED IN keys= (§7C — every {{var.field}} in body must be in keys=):\n")
+		for _, e := range ce.MissingKeys {
+			b.WriteString(fmt.Sprintf("  - %s\n", e))
+		}
+		b.WriteString("FIX: Add the missing field names to the keys= attribute of the section that declares the var.\n\n")
+	}
+
+	if len(ce.UndeclaredVars) > 0 {
+		b.WriteString("VARS USED BUT NOT DECLARED (§7C — every {{var}} in body must be in var= or [object-unpredictable]):\n")
+		for _, e := range ce.UndeclaredVars {
+			b.WriteString(fmt.Sprintf("  - %s\n", e))
+		}
+		b.WriteString("FIX: Declare the variable in var= of the appropriate section, or use [object-unpredictable].\n\n")
+	}
+
+	if len(ce.Other) > 0 {
+		b.WriteString("OTHER ERRORS:\n")
+		for _, e := range ce.Other {
+			b.WriteString(fmt.Sprintf("  - %s\n", e))
+		}
+		b.WriteString("\n")
+	}
+
+	if attempt >= 1 {
+		b.WriteString("OUTPUT WITH ERRORS (showing only sections that need fixing):\n---\n")
+		sections := strings.Split(result, "[section")
+		for _, sec := range sections {
+			if sec == "" {
+				continue
+			}
+			secName := ""
+			if idx := strings.Index(sec, "]"); idx > 0 {
+				secName = sec[:idx+1]
+			}
+			for _, e := range ce.SectionLimits {
+				if strings.Contains(e, secName) || strings.Contains(sec, e[:min(len(e), 20)]) {
+					b.WriteString("[section" + sec[:min(len(sec), 500)])
+					if len(sec) > 500 {
+						b.WriteString("...[truncated]")
+					}
+					b.WriteString("\n\n")
+					break
+				}
+			}
+		}
+		b.WriteString("---\n\n")
+	}
+
+	b.WriteString("Regenerate the FULL valid DCD template, fixing ALL the issues above.\n")
+	return b.String()
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func isLoopVarInSection(v string, sections []sectionInfo) bool {
 	for _, s := range sections {
 		if contains(s.Vars, v) {

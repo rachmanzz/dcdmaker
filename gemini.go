@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rachmanzz/words-xml/words"
 	"google.golang.org/genai"
 )
 
@@ -121,12 +122,12 @@ func (p *geminiProvider) generateContentStream(ctx context.Context, parts []*gen
 }
 
 func (p *geminiProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	doc, err := ParseDOCX(data)
+	doc, err := words.ProcessDOCXBytes(data)
 	if err != nil {
 		return "", fmt.Errorf("gemini: parse docx: %w", err)
 	}
 
-	cleanedContent := doc.FormatForLLM()
+	cleanedContent := doc.WordsXML
 	writeWordsXMLDebug(p.Name(), cleanedContent)
 
 	var b bytes.Buffer

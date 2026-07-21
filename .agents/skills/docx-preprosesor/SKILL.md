@@ -1,18 +1,44 @@
-# DOCX Preprocessor — Source Document Format (`words` XML v1.0.1)
+# Source Document Format — words-XML v1.0.1
 
-The source document is `words` XML — a structured, LLM-friendly intermediate format
-produced by the DOCX Preprocessor. It is NOT raw DOCX OOXML.
+## What is words-XML?
 
-Do NOT look for XML tags like `<w:p>`, `<w:r>`, `<w:t>`, `<w:pgMar>`, etc.
+words-XML is a structured representation of DOCX (OOXML) that has been deliberately simplified and restructured for LLM consumption. It is NOT raw DOCX XML.
 
-## Mode
+### Design Philosophy
 
-The preprocessor operates in one of two modes (`mode` attribute on root `<words>`):
+**Minimalist transformation from OOXML:**
+- Strips verbose XML namespaces (`w:`, `r:`, `wp:`, etc.)
+- Removes redundant formatting metadata (proofing errors, language tags, font inheritance chains)
+- Collapses deep nesting into flat, readable structures
+- Preserves only what matters: content, structure, and essential formatting
 
-- `mode="semantic"` (default): stripped-down for AI training / downstream consumption.
+**HTML-like but NOT HTML:**
+- Uses familiar element names: `<p>`, `<h1>`-`<h9>`, `<ul>`, `<ol>`, `<li>`, `<table>`, `<tr>`, `<td>`, `<th>`, `<b>`, `<i>`, `<u>`, `<s>`, `<a>`
+- Attributes are space-separated (not `key="value"` pairs like HTML)
+- Attribute names are abbreviated but meaningful: `c` (custom style), `at` (borders), `dir` (direction), `lang` (language)
+- Self-closing tags use `/>` syntax
+
+**Some attributes are unique to words-XML:**
+- `at` — compact border representation (not found in HTML or OOXML)
+- `c` — custom style name preservation
+- `s:page`, `s:line`, `s:gap`, `s:indent` — layout primitives in `<style>` block
+
+### NOT HTML
+
+Do NOT apply HTML/CSS rules. This is a purpose-built XML format for document representation.
+
+### NOT OOXML
+
+Do NOT look for XML tags like `<w:p>`, `<w:r>`, `<w:t>`, `<w:pgMar>`, `<w:rPr>`, etc. All OOXML-specific elements have been replaced with simplified equivalents.
+
+## Modes
+
+The format operates in one of two modes (`mode` attribute on root `<words>`):
+
+- **`mode="semantic"`** (default): stripped-down for AI consumption.
   - Whitespace normalized (collapsed spaces, trimmed newlines).
   - Tracked changes (`w:ins`/`w:del`) dropped entirely.
-- `mode="lossless"`: preserves additional metadata for round-tripping.
+- **`mode="lossless`**: preserves additional metadata for round-tripping.
   - Whitespace NOT normalized (original spacing preserved).
   - Tracked changes emitted as `<ins>`/`<del>` with `id`/`author`/`date` attrs.
 
@@ -47,6 +73,8 @@ Contains properties from `docProps/core.xml`. Only non-empty fields emitted.
 
 ## `<style>` — Layout Block (required)
 
+The `<style>` block is XML (not INI, not HTML). It uses the `s:` namespace prefix for style primitives.
+
 Minimum required `<style>` block:
 
 ```xml
@@ -54,6 +82,21 @@ Minimum required `<style>` block:
   <s:page size="A4" mt="0.75" mb="0.75" ml="0.75" mr="0.75" mh="0.5" mf="0.5"/>
 </style>
 ```
+
+### Style Primitives
+
+| Primitive | Purpose | Key Attributes |
+|-----------|---------|----------------|
+| `<s:page>` | Page geometry | `size`, `w`, `h`, `mt`, `mb`, `ml`, `mr`, `mh`, `mf` |
+| `<s:gap>` | Paragraph/heading spacing | `el`, `c`, `before`, `after` |
+| `<s:line>` | Line spacing | `el`, `value`, `rule` |
+| `<s:indent>` | Paragraph indentation | `el`, `left`, `right`, `firstLine`, `hanging` |
+| `<s:align>` | Paragraph alignment | `el`, `value` |
+| `<s:cols>` | Multi-column layout | `n`, `space` |
+| `<s:col>` | Column/grid widths | `ref`, `width`, `unit` |
+| `<s:tab>` | Tab stop definition | `el`, `pos`, `align`, `leader` |
+| `<s:theme>` | Global font/color defaults | `font`, `fontEA`, `fontCS`, `fg`, `bg` |
+| `<s:custom>` | Custom style definition | `name`, `basedOn`, `type`, formatting attrs |
 
 ### `<s:page>` — Page Geometry
 
@@ -210,7 +253,7 @@ or `even`. Content uses same block elements as `<write>`.
 
 - **`c`** — preserves original custom style name (e.g., `<h1 c="MyCustomHeading">`).
   Not emitted for standard styles (Heading1-9, Normal, etc.).
-- **`at`** — compact border representation.
+- **`at`** — compact border representation (unique to words-XML).
   Format: `at="[side] [width] [style][space] [color]; ..."`
   Side: `bt`(top), `bb`(bottom), `bl`(left), `br`(right)
   Style: `s`(single), `d`(double), `ds`(dashed), `dt`(dotted), `n`(none)

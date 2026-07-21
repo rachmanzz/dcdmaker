@@ -23,6 +23,10 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString(dcdSpec)
 	b.WriteString("\n\n")
 
+	b.WriteString("=== SOURCE DOCUMENT FORMAT ===\n")
+	b.WriteString(docxPreprocessorSpec)
+	b.WriteString("\n\n")
+
 	if len(predictableKeys) > 0 {
 		b.WriteString("=== PREDICTED VARIABLES ===\n\n")
 		for _, k := range predictableKeys {
@@ -49,32 +53,6 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 		}
 		b.WriteString("\n")
 	}
-
-	b.WriteString("=== INSTRUCTION ===\n")
-	b.WriteString("DO NOT use default values. DO NOT assume anything.\n")
-	b.WriteString("Extract ALL values directly from the SOURCE DOCUMENT below.\n\n")
-	b.WriteString("=== SOURCE DOCUMENT FORMAT ===\n")
-	b.WriteString(docxPreprocessorSpec)
-	b.WriteString("\n\n")
-	b.WriteString("You MUST scan the ENTIRE source document from first paragraph to last paragraph. Do NOT stop early, skip sections, or summarize.\n")
-	b.WriteString("Every single paragraph, table, and list in the source MUST have a corresponding DCD entry in the output.\n\n")
-
-	b.WriteString("=== CRITICAL: NO DCD SYNTAX ASSUMPTIONS ===\n")
-	b.WriteString("The DCD DSL SPECIFICATION above is the COMPLETE and AUTHORITATIVE reference.\n")
-	b.WriteString("Do NOT invent, extrapolate, or assume any DCD syntax features beyond what is explicitly listed there.\n")
-	b.WriteString("Every tag, attribute, and syntax pattern you use MUST be directly from the specification.\n")
-	b.WriteString("If a DCD feature is not documented in the specification, it does not exist — do not use it.\n\n")
-
-	b.WriteString("Task:\n")
-	b.WriteString("- Use the source document's `<style>` block (from `<words>` XML) as the reference for page layout, margins, fonts, and line-height.\n")
-	b.WriteString("- Parse the `<write>` content for paragraphs (`<p>`), headings (`<h1>`-`<h9>`), lists (`<ul>`/`<ol>`/`<li>`), alignment, and formatting.\n")
-	b.WriteString("- Match font-family, font-size, heading hierarchy EXACTLY from the source `<style>` block.\n")
-	b.WriteString("- Every text line must be preserved in correct order.\n")
-	b.WriteString("- CRITICAL: Do NOT skip transitional clauses, introductory phrases, exception clauses, or connecting text between sections. Pay EXTRA attention to the FINAL paragraphs. Every sentence must map to DCD.\n")
-	b.WriteString("- CRITICAL: If source contains placeholder dots (e.g. ............) used as fill-in fields, replace them with `{{var.field}}`. Infer field name from context. Do NOT copy placeholder dots literally. This is the default — only keep literal dots if user provides explicit instruction via `-prompt`.\n")
-	b.WriteString("- CRITICAL: Do NOT copy all predicted variables into every section. Distribute them based on actual usage per section.\n")
-	b.WriteString("- CRITICAL: If source contains multiple distinct entries needing different formatting, use separate source arrays or separate sections.\n")
-	b.WriteString("- Organize content into `[section N]` blocks with proper var/keys declarations. Use `[object-unpredictable]` and `[keys-unpredictable]` only for fields not in the predictable data.\n\n")
 
 	if len(predictableKeys) > 0 {
 		b.WriteString("=== FORBIDDEN IN UNPREDICTABLE ===\n")

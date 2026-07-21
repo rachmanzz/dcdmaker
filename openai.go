@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/rachmanzz/words-xml/words"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 )
@@ -38,12 +39,12 @@ func (p *openAIProvider) getClient() openai.Client {
 }
 
 func (p *openAIProvider) GenerateWithFile(ctx context.Context, prompt string, _ string, data []byte) (string, error) {
-	doc, err := ParseDOCX(data)
+	doc, err := words.ProcessDOCXBytes(data)
 	if err != nil {
 		return "", fmt.Errorf("openai: parse docx: %w", err)
 	}
 
-	cleanedContent := doc.FormatForLLM()
+	cleanedContent := doc.WordsXML
 	writeWordsXMLDebug(p.Name(), cleanedContent)
 
 	var b strings.Builder

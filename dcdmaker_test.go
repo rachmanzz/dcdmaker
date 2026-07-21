@@ -816,12 +816,11 @@ keys=title
 func TestValidateVarsAndKeysMissingField(t *testing.T) {
 	dcd := `[section 0]
 name=test
-var=info
-keys=title
+keys=title, missing_field
 
 --- BODY ---
-<p>{{info.title}}</p>
-<p>{{info.missing_field}}</p>
+<p>{{title}}</p>
+<p>{{missing_field}}</p>
 `
 	_, err := validateVarsAndKeys(dcd)
 	if err == nil {

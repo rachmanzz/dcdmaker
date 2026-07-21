@@ -178,10 +178,20 @@ func validateVarsAndKeys(dcd string) (warnings []string, err error) {
 			if loopVars[v] && !isLoopVarInSection(v, sections) {
 				// loop source should be fine even without special handling
 			}
+			isObject := false
+			for _, s := range sections {
+				if contains(s.Vars, v) {
+					isObject = true
+					break
+				}
+			}
+			if isObject {
+				continue
+			}
 			for f := range usedVarFields[v] {
 				found := false
 				for _, s := range sections {
-					if contains(s.Vars, v) && contains(s.Keys, f) {
+					if contains(s.Keys, v+"."+f) || (contains(s.Keys, f) && !strings.Contains(f, ".")) {
 						found = true
 						break
 					}

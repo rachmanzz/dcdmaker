@@ -29,6 +29,23 @@ If multiple valid outputs are possible, you MUST choose the one that follows thi
 
 **CRITICAL MINDSET:** DCD DSL is a PURE, PROPRIETARY document language. Although it uses angle brackets (such as `<p>` or `<ol>`), they are DCD grammar—not HTML or XML. Never apply HTML, CSS, XML, Markdown, or browser rendering rules when generating DCD DSL.
 
+## 2. COMPILATION MODE & PRECEDENCE
+
+Treat the source document as immutable input. Generate the equivalent DCD document by applying this specification exactly.
+
+The output MUST preserve: document order, document hierarchy, textual content, formatting semantics.
+
+The output MUST NOT contain: explanations, comments, markdown, HTML, XML copied from the source.
+
+### Resolution Order
+
+If instructions conflict, resolve in this order:
+
+1. **DCD DSL Specification** — defines valid syntax
+2. **Source document** — defines document content
+3. **Predictable schema** — defines reusable variables
+4. **User instruction** — only when it does not violate the specification or alter the source document
+
 ## 3. STYLE CONFIGURATION
 
 ```ini
@@ -488,6 +505,14 @@ The optional `type=` attribute accepts:
 * Fields inside the loop MUST be referenced through the loop alias (e.g., `{{x.name}}`).
 * The closing tag MUST exactly match the opening loop variant.
 * Standard `<loop>` MUST NOT be nested inside static `<ol>` or `<ul>`. Ordered and unordered list loops MUST use `<loop:ol>` or `<loop:ul>` directly.
+
+### C. Reserved Alias Names (FORBIDDEN)
+
+The following words MUST NOT be used as loop iteration aliases:
+
+* `loop`, `from`, `source`, `item`, `items`, `entry`, `entries`, `row`, `rows`, `col`, `cols`, `data`, `list`, `element`, `node`, `key`, `value`, `index`, `i`, `e`, `s`, `p`, `t`, `r`, `n`
+
+Use meaningful aliases that reflect the data (e.g., `person`, `founder`, `order`, `row`).
 
 ### Valid Examples
 

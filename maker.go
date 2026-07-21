@@ -220,42 +220,16 @@ func (m *Maker) generate(data []byte) (string, error) {
 
 			valid, reason := isDCDValid(result)
 			if valid {
-				warnings, err := validateVarsAndKeys(result)
+				warnings, _ := validateVarsAndKeys(result)
 				if debug && len(warnings) > 0 {
 					for _, w := range warnings {
-						fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: warning: %s\n",
+						fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: hint: %s\n",
 							provider.Name(), attempt+1, w)
 					}
 				}
-				if err == nil {
-					m.lastProvider = provider.Name()
-					m.lastResult = result
-					return result, nil
-				}
-
-				errCount := ValidationErrorCount(err)
-				if debug {
-					fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validation failed (%d errors): %s\n",
-						provider.Name(), attempt+1, errCount, err)
-				}
-
-				if isLastRetry {
-					if errCount <= 5 {
-						if debug {
-							fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: accepting with %d minor errors\n",
-								provider.Name(), attempt+1, errCount)
-						}
-						m.lastProvider = provider.Name()
-						m.lastResult = result
-						return result, nil
-					}
-					lastErr = fmt.Errorf("%s attempt %d: %d validation errors (too many to accept): %w",
-						provider.Name(), attempt+1, errCount, err)
-					break
-				}
-
-				prompt = originalPrompt + buildRetryFeedback(err, result, attempt)
-				continue
+				m.lastProvider = provider.Name()
+				m.lastResult = result
+				return result, nil
 			}
 
 			lastErr = fmt.Errorf("%s attempt %d: %s", provider.Name(), attempt+1, reason)

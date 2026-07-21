@@ -116,19 +116,16 @@ func validateVarsAndKeys(dcd string) (warnings []string, err error) {
 	usages := scanBody(dcd)
 	loopIterVars := collectLoopIterVars(dcd)
 
-	declaredVars := map[string][]string{} // varName -> [field1, field2, ...]
+	declaredVars := map[string][]string{}
 	declaredKeys := map[string]bool{}
 	var declaredVarList []string
-	var declaredKeyList []string
-
-	var errs []string
 
 	for _, s := range sections {
 		if len(s.Vars) > 3 {
-			errs = append(errs, fmt.Sprintf("section %q has %d vars (max 3)", s.Name, len(s.Vars)))
+			warnings = append(warnings, fmt.Sprintf("section %q has %d vars (max 3)", s.Name, len(s.Vars)))
 		}
 		if len(s.Keys) > 15 {
-			errs = append(errs, fmt.Sprintf("section %q has %d keys (max 15)", s.Name, len(s.Keys)))
+			warnings = append(warnings, fmt.Sprintf("section %q has %d keys (max 15)", s.Name, len(s.Keys)))
 		}
 		for _, v := range s.Vars {
 			name := strings.TrimPrefix(v, "[]")
@@ -140,14 +137,12 @@ func validateVarsAndKeys(dcd string) (warnings []string, err error) {
 		for _, k := range s.Keys {
 			if !declaredKeys[k] {
 				declaredKeys[k] = true
-				declaredKeyList = append(declaredKeyList, k)
 			}
 		}
 	}
 
 	usedVars := map[string]bool{}
-	usedVarFields := map[string]map[string]bool{} // varName -> {field: true}
-	loopVars := map[string]bool{}
+	usedVarFields := map[string]map[string]bool{}
 
 	for _, u := range usages {
 		usedVars[u.Var] = true
@@ -156,9 +151,6 @@ func validateVarsAndKeys(dcd string) (warnings []string, err error) {
 				usedVarFields[u.Var] = map[string]bool{}
 			}
 			usedVarFields[u.Var][u.Field] = true
-		}
-		if u.IsLoop {
-			loopVars[u.Var] = true
 		}
 	}
 
@@ -173,39 +165,33 @@ func validateVarsAndKeys(dcd string) (warnings []string, err error) {
 			continue
 		}
 		if _, ok := declaredVars[v]; !ok {
-			errs = append(errs, fmt.Sprintf("var %q used in body is not declared in any [section] var=", v))
-		} else {
-			if loopVars[v] && !isLoopVarInSection(v, sections) {
-				// loop source should be fine even without special handling
+			warnings = append(warnings, fmt.Sprintf("var %q used in body is not declared in any [section] var=", v))
+			continue
+		}
+		isObject := false
+		for _, s := range sections {
+			if contains(s.Vars, v) {
+				isObject = true
+				break
 			}
-			isObject := false
+		}
+		if isObject {
+			continue
+		}
+		for f := range usedVarFields[v] {
+			found := false
 			for _, s := range sections {
-				if contains(s.Vars, v) {
-					isObject = true
+				if contains(s.Keys, v+"."+f) || (contains(s.Keys, f) && !strings.Contains(f, ".")) {
+					found = true
 					break
 				}
 			}
-			if isObject {
-				continue
-			}
-			for f := range usedVarFields[v] {
-				found := false
-				for _, s := range sections {
-					if contains(s.Keys, v+"."+f) || (contains(s.Keys, f) && !strings.Contains(f, ".")) {
-						found = true
-						break
-					}
-				}
-				if !found {
-					errs = append(errs, fmt.Sprintf("field %q of var %q used in body but not in any keys=", f, v))
-				}
+			if !found {
+				warnings = append(warnings, fmt.Sprintf("field %q of var %q used in body but not in any keys=", f, v))
 			}
 		}
 	}
 
-	if len(errs) > 0 {
-		return warnings, fmt.Errorf("dcd validation:\n  - %s", strings.Join(errs, "\n  - "))
-	}
 	return warnings, nil
 }
 

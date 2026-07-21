@@ -822,9 +822,9 @@ keys=title, missing_field
 <p>{{title}}</p>
 <p>{{missing_field}}</p>
 `
-	_, err := validateVarsAndKeys(dcd)
-	if err == nil {
-		t.Fatal("expected error for missing field")
+	warnings, _ := validateVarsAndKeys(dcd)
+	if len(warnings) == 0 {
+		t.Fatal("expected warning for missing field")
 	}
 }
 
@@ -840,9 +840,9 @@ keys=title
 <col>{{x.nama}}</col>
 </loop>
 `
-	_, err := validateVarsAndKeys(dcd)
-	if err == nil {
-		t.Fatal("expected error for undeclared var 'pendiri'")
+	warnings, _ := validateVarsAndKeys(dcd)
+	if len(warnings) == 0 {
+		t.Fatal("expected warning for undeclared var 'pendiri'")
 	}
 }
 

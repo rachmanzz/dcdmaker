@@ -48,6 +48,49 @@ If instructions conflict, resolve in this order:
 
 ## 3. STYLE CONFIGURATION
 
+### A. Source Document Style → DCD `[style]` Generation
+
+The SOURCE DOCUMENT STYLE section of the prompt contains raw `<style>` XML from the `words-xml` library. You MUST generate the DCD `[style]` and `[style:heading-N]` blocks from this raw XML. Do NOT output raw XML, HTML, or any markup other than DCD syntax.
+
+```ini
+=== SOURCE DOCUMENT STYLE ===
+<style unit="cm">
+<s:page w="21" h="29.7" mt="2.5" mb="2.5" ml="3" mr="3"/>
+<s:theme font="Times New Roman"/>
+<s:line el="p" value="1.5"/>
+<s:custom name="Heading 1" type="paragraph" font="Times New Roman" size="28" color="2b5797" bold="true"/>
+<s:custom name="Normal" type="paragraph" font="Times New Roman" size="16"/>
+<s:gap el="h" c="Heading 1" before="18" after="12"/>
+</style>
+```
+
+Generates:
+
+```ini
+[style]
+unit=cm
+layout=A4
+w=21
+h=29.7
+m-t=2.5
+m-b=2.5
+m-l=3
+m-r=3
+font-family="Times New Roman"
+line-height=1.5
+
+[style:heading-1]
+font-family="Times New Roman"
+font-size=28
+color=#2b5797
+bold=true
+space-before=18
+space-after=12
+
+```
+
+### B. DCD Style Syntax Reference
+
 ```ini
 [style]
 layout=A4                    # A4, letter, legal, A3, A5, B5, custom
@@ -61,7 +104,7 @@ line-height=1.5
 
 ```
 
-### Custom Layout & Margins
+### C. Custom Layout & Margins
 
 (Margin precedence low→high: m → mx/my → md → mt/mb/ml/mr)
 
@@ -76,7 +119,7 @@ m=1 # all sides
 
 ```
 
-### Paragraph Indentation Defaults
+### D. Paragraph Indentation Defaults
 
 Global default for paragraph indentation, applied to all `<p>` and `<li>` unless overridden by inline attributes.
 
@@ -210,10 +253,10 @@ The `--- BODY ---` section MUST follow the structural rules defined below. Parag
 
 #### 1. Wrapper Paragraphs (`<w:*>`)
 
-A paragraph MUST use `<w:*>` when the entire paragraph shares a single formatting definition.
+A paragraph MUST use `<w:*>` when the ENTIRE paragraph shares a single, uniform formatting definition. Every character in the paragraph has the same alignment, bold/italic/underline state, font size, and color.
 
 * **Allowed Content:** Plain text and template variables (`{{...}}`) ONLY.
-* **Forbidden Content:** Nested DCD tags of any kind.
+* **Forbidden Content:** Nested DCD tags of ANY kind (`<b>`, `<i>`, `<u>`, `<p>`, `<set:...>`, etc.).
 * **Syntax:** `<w:align|styles attributes>`
 
 * **Valid Alignment Values:**
@@ -249,6 +292,25 @@ A paragraph MUST use `<w:*>` when the entire paragraph shares a single formattin
   underline=dash
   underline=wavy
   ```
+
+##### Anti-Pattern: Nested Tags Inside `<w:*>` (FORBIDDEN)
+
+```text
+INVALID: <w:c|b><b>text</b></w:c|b>
+```
+The wrapper `<w:c|b>` already declares "center + bold" for the whole paragraph. Adding `<b>` inside is redundant AND violates the rule that `<w:*>` MUST NOT contain nested tags.
+
+**Correct representations:**
+- If the ENTIRE paragraph is uniformly bold and centered → `<w:c|b>text</w:c|b>` (plain text only, no `<b>`)
+- If only PART of the paragraph is bold → use `<p>` with inline `<b>` tags:
+
+```text
+<p align=center><b>Bold part</b> normal part</p>
+```
+
+**Decision rule:**
+- Uniform formatting across all content → `<w:*>` with plain text only
+- Varying formatting within the paragraph → `<p>` with inline tags (`<b>`, `<i>`, `<set:...>`, etc.)
 
 #### 2. Rich Paragraphs (`<p>`)
 

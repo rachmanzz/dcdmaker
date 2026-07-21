@@ -461,7 +461,7 @@ func TestBuildPromptWithFieldDefs(t *testing.T) {
 			Field("date", "date-str", "DD-MM-YYYY"),
 			Field("total", "number"),
 		),
-	})
+	}, "")
 
 	if !strings.Contains(prompt, "info {invoice_no: string, date: date-str (DD-MM-YYYY)}") {
 		t.Errorf("prompt missing ObjectEx with types:\n%s", prompt)
@@ -588,7 +588,7 @@ func TestBuildPromptWithPredictableKeys(t *testing.T) {
 		Object("info", "invoice_no", "date"),
 		Array("items", "name", "qty"),
 	}
-	prompt := buildPrompt("", keys)
+	prompt := buildPrompt("", keys, "")
 
 	if !strings.Contains(prompt, "=== PREDICTED VARIABLES ===") {
 		t.Error("prompt missing PREDICTED VARIABLES section")
@@ -925,7 +925,7 @@ func TestBuildRetryFeedback(t *testing.T) {
 
 
 func TestBuildPromptWithoutPredictableKeys(t *testing.T) {
-	prompt := buildPrompt("hello", nil)
+	prompt := buildPrompt("hello", nil, "")
 
 	if strings.Contains(prompt, "=== PREDICTED VARIABLES ===") {
 		t.Error("prompt should not contain PREDICTED VARIABLES when no keys given")

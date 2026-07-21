@@ -12,7 +12,7 @@ var dcdSpec string
 //go:embed .agents/skills/docx-preprosesor/SKILL.md
 var docxPreprocessorSpec string
 
-func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
+func buildPrompt(userPrompt string, predictableKeys []KeyDef, sourceStyleXML string) string {
 	var b strings.Builder
 
 	b.WriteString("Output ONLY raw DCD template syntax, no explanations, no markdown wrapping.\n")
@@ -26,6 +26,14 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("=== SOURCE DOCUMENT FORMAT ===\n")
 	b.WriteString(docxPreprocessorSpec)
 	b.WriteString("\n\n")
+
+	if sourceStyleXML != "" {
+		b.WriteString("=== SOURCE DOCUMENT STYLE ===\n")
+		b.WriteString("Extract the [style] and [style:heading-N] blocks from the following source document style.\n")
+		b.WriteString("Use this as the EXACT reference for page layout, margins, fonts, line-height, and heading styles.\n")
+		b.WriteString(sourceStyleXML)
+		b.WriteString("\n\n")
+	}
 
 	if len(predictableKeys) > 0 {
 		b.WriteString("=== PREDICTED VARIABLES ===\n\n")

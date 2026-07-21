@@ -169,13 +169,13 @@ func (m *Maker) Run(output string) error {
 }
 
 func (m *Maker) generate(data []byte) (string, error) {
-	var styleBlock string
+	var sourceStyleXML string
 	wordsResult, parseErr := words.ProcessDOCXBytes(data)
 	if parseErr == nil {
-		styleBlock = extractStyleBlock(wordsResult.WordsXML)
+		sourceStyleXML = extractStyleBlock(wordsResult.WordsXML)
 	}
 
-	originalPrompt := buildPrompt(m.userPrompt, m.predictableKeys)
+	originalPrompt := buildPrompt(m.userPrompt, m.predictableKeys, sourceStyleXML)
 	prompt := originalPrompt
 	ctx := context.Background()
 
@@ -211,14 +211,7 @@ func (m *Maker) generate(data []byte) (string, error) {
 			}
 
 			result = sanitizeDCD(result)
-			if styleBlock != "" {
-				result = stripStyleBlock(result)
-			}
 			result = fixUnpredictableOverlap(result, m.predictableKeys)
-
-			if styleBlock != "" {
-				result = styleBlock + "\n\n" + result
-			}
 
 			if debug {
 				fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validating...\n",

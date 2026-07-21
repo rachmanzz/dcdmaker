@@ -186,6 +186,8 @@ func (m *Maker) generate(data []byte) (string, error) {
 		var lastErr error
 
 		for attempt := range m.maxRetries {
+			isLastRetry := attempt == m.maxRetries-1
+
 			if attempt > 0 {
 				select {
 				case <-ctx.Done():
@@ -232,17 +234,40 @@ func (m *Maker) generate(data []byte) (string, error) {
 							provider.Name(), attempt+1, w)
 					}
 				}
-				if err != nil {
-					lastErr = fmt.Errorf("%s attempt %d: %w", provider.Name(), attempt+1, err)
-					if debug {
-						fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validation failed: %s\n",
-							provider.Name(), attempt+1, err)
-					}
-					continue
+				if err == nil {
+					m.lastProvider = provider.Name()
+					m.lastResult = result
+					return result, nil
 				}
-				m.lastProvider = provider.Name()
-				m.lastResult = result
-				return result, nil
+
+				errCount := ValidationErrorCount(err)
+				if debug {
+					fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: validation failed (%d errors): %s\n",
+						provider.Name(), attempt+1, errCount, err)
+				}
+
+				if isLastRetry {
+					if errCount <= 5 {
+						if debug {
+							fmt.Fprintf(os.Stderr, "[dcd-debug] %s attempt %d: accepting with %d minor errors\n",
+								provider.Name(), attempt+1, errCount)
+						}
+						m.lastProvider = provider.Name()
+						m.lastResult = result
+						return result, nil
+					}
+					lastErr = fmt.Errorf("%s attempt %d: %d validation errors (too many to accept): %w",
+						provider.Name(), attempt+1, errCount, err)
+					break
+				}
+
+				prompt = originalPrompt + fmt.Sprintf(
+					"\n\nThe previous attempt had %d validation errors:\n%s\n"+
+						"Invalid output:\n---\n%s\n---\n\n"+
+						"Regenerate a valid DCD template, fixing ALL the issues above:\n",
+					errCount, err, result,
+				)
+				continue
 			}
 
 			lastErr = fmt.Errorf("%s attempt %d: %s", provider.Name(), attempt+1, reason)
@@ -251,6 +276,10 @@ func (m *Maker) generate(data []byte) (string, error) {
 					provider.Name(), attempt+1, reason)
 				sanPath := filepath.Join("dcd_temp", fmt.Sprintf("dcd_debug_%s_attempt_%d_sanitized.dcd", provider.Name(), attempt+1))
 				os.WriteFile(sanPath, []byte(result), 0644)
+			}
+
+			if isLastRetry {
+				break
 			}
 
 			if debug {

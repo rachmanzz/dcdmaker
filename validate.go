@@ -207,6 +207,13 @@ func collectLoopIterVars(dcd string) map[string]bool {
 	return result
 }
 
+func ValidationErrorCount(err error) int {
+	if err == nil {
+		return 0
+	}
+	return strings.Count(err.Error(), "\n  - ")
+}
+
 func isLoopVarInSection(v string, sections []sectionInfo) bool {
 	for _, s := range sections {
 		if contains(s.Vars, v) {

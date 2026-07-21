@@ -1,6 +1,7 @@
 package dcdmaker
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -879,6 +880,19 @@ keys=title
 	}
 	if len(warnings) != 1 {
 		t.Fatalf("expected 1 warning for unused var, got %d: %v", len(warnings), warnings)
+	}
+}
+
+func TestValidationErrorCount(t *testing.T) {
+	if ValidationErrorCount(nil) != 0 {
+		t.Fatal("expected 0 for nil error")
+	}
+	if ValidationErrorCount(fmt.Errorf("simple error")) != 0 {
+		t.Fatal("expected 0 for error without bullet points")
+	}
+	err := fmt.Errorf("dcd validation:\n  - error one\n  - error two\n  - error three")
+	if ValidationErrorCount(err) != 3 {
+		t.Fatalf("expected 3, got %d", ValidationErrorCount(err))
 	}
 }
 

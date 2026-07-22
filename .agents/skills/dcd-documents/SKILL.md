@@ -255,8 +255,15 @@ The `--- BODY ---` section MUST follow the structural rules defined below. Parag
 
 A paragraph MUST use `<w:*>` when the ENTIRE paragraph shares a single, uniform formatting definition. Every character in the paragraph has the same alignment, bold/italic/underline state, font size, and color.
 
-* **Allowed Content:** Plain text and template variables (`{{...}}`) ONLY.
-* **Forbidden Content:** Nested DCD tags of ANY kind (`<b>`, `<i>`, `<u>`, `<p>`, `<set:...>`, etc.).
+Content inside `<w:*>` MUST be plain text and `{{...}}` variables ONLY.
+
+Absolutely NO DCD tags are allowed inside `<w:*>`, including but not limited to:
+`<b>`, `<i>`, `<u>`, `<s>`, `<p>`, `<w:*>`, `<set:...>`, `<code>`, `<sub>`,
+`<sup>`, `<mark>`, `<tab>`, `<h1>`–`<h6>`, `<ul>`, `<ol>`, `<li>`, `<br>`,
+`<pb>`, `<loop>`, `<loop:ul>`, `<loop:ol>`.
+
+Even if the wrapper already declares the same formatting flag, the inner tag is STILL forbidden.
+
 * **Syntax:** `<w:align|styles attributes>`
 
 * **Valid Alignment Values:**
@@ -295,10 +302,16 @@ A paragraph MUST use `<w:*>` when the ENTIRE paragraph shares a single, uniform 
 
 ##### Anti-Pattern: Nested Tags Inside `<w:*>` (FORBIDDEN)
 
+ALL nested tags inside `<w:*>` are forbidden, even if they match a flag already declared by the wrapper.
+
 ```text
-INVALID: <w:c|b><b>text</b></w:c|b>
+INVALID:
+<w:c|b><b>text</b></w:c|b>              # <b> redundant with flag b — STILL FORBIDDEN
+<w:l|i><i>text</i></w:l|i>              # <i> redundant with flag i — STILL FORBIDDEN
+<w:j><set:b|u>text</set:b|u></w:j>      # <set:...> forbidden
+<w:c><p>text</p></w:c>                  # <p> forbidden
+<w:r><code>text</code></w:r>            # <code> forbidden
 ```
-The wrapper `<w:c|b>` already declares "center + bold" for the whole paragraph. Adding `<b>` inside is redundant AND violates the rule that `<w:*>` MUST NOT contain nested tags.
 
 **Correct representations:**
 - If the ENTIRE paragraph is uniformly bold and centered → `<w:c|b>text</w:c|b>` (plain text only, no `<b>`)

@@ -525,6 +525,18 @@ Valid tags:
 
 Static lists MAY be nested.
 
+**CRITICAL:** `<li>` MUST NOT contain `<p>` or `<w:*>` tags. Content inside `<li>` MUST be plain text, template variables (`{{...}}`), or inline tags (`<b>`, `<i>`, `<set:...>`, etc.) ONLY.
+
+```text
+INVALID:
+<li><p>some text</p></li>
+
+VALID:
+<li>some text</li>
+<li><b>bold item</b></li>
+<li>item with {{variable}}</li>
+```
+
 Dynamic arrays MUST use the loop constructs defined in Section 8.
 
 ---
@@ -561,12 +573,29 @@ The optional `type=` attribute accepts:
 * `I`
 * `i`
 
+The optional `indexType=` attribute controls the loop index numbering style:
+
+* `1` — 1, 2, 3 (default, same as omitting indexType)
+* `a` — a, b, c
+* `A` — A, B, C
+* `i` — i, ii, iii
+* `I` — I, II, III
+
+```text
+<loop x from entries indexType=A>
+<p>{{index}}. {{x.name}}</p>
+</loop>
+
+→ outputs: A. ..., B. ..., C. ...
+```
+
 ### B. Loop Rules
 
 * The source MUST be declared using the `[]` prefix in `var=`.
-* Fields inside the loop MUST be referenced through the loop alias (e.g., `{{x.name}}`).
+* Fields inside the loop MUST be accessed through the loop alias (e.g., `{{x.name}}`). Any formatted array field MUST use its schema path in `formats=` (e.g., `entries.date_field`).
 * The closing tag MUST exactly match the opening loop variant.
 * Standard `<loop>` MUST NOT be nested inside static `<ol>` or `<ul>`. Ordered and unordered list loops MUST use `<loop:ol>` or `<loop:ul>` directly.
+* **Loop-Specific Variable:** `{{index}}` is a built-in variable available ONLY inside loops. It returns the current loop iteration index in the format defined by `indexType=` (default: `1, 2, 3`). `{{index}}` MUST NOT be declared in `var=` or `keys=`.
 
 ### C. Reserved Alias Names (FORBIDDEN)
 
@@ -586,6 +615,10 @@ Use meaningful aliases that reflect the data (e.g., `person`, `founder`, `order`
 <loop:ol x from items type=A>
 {{x.label}}
 </loop:ol>
+
+<loop x from items indexType=a>
+{{index}}. {{x.name}}
+</loop>
 ```
 
 ### Invalid Examples

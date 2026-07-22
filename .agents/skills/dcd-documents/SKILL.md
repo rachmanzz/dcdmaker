@@ -608,6 +608,21 @@ The optional `indexType=` attribute controls the loop index numbering style:
 * Fields inside the loop MUST be accessed through the loop alias (e.g., `{{x.name}}`). Any formatted array field MUST use its schema path in `formats=` (e.g., `entries.date_field`).
 * The closing tag MUST exactly match the opening loop variant.
 * Standard `<loop>` MUST NOT be nested inside static `<ol>` or `<ul>`. Ordered and unordered list loops MUST use `<loop:ol>` or `<loop:ul>` directly.
+* **CRITICAL: Array Access Restriction:** Variables declared with `[]` (arrays) MUST NOT be accessed using object prefix syntax (`{{array.field}}`) outside a `<loop>`. Arrays can ONLY be accessed through `<loop>` constructs via a loop alias. Direct `{{array.field}}` access outside a loop is INVALID.
+
+```text
+INVALID:
+<loop x from jabatan>
+...
+</loop>
+<p>{{jabatan.nama}}</p>    ← WRONG: array accessed with object prefix outside loop
+
+VALID:
+<loop x from jabatan>
+<p>{{x.nama}}</p>
+</loop>
+```
+
 * **Loop-Specific Variable:** `{{index}}` is a built-in variable available ONLY inside loops. It returns the current loop iteration index in the format defined by `indexType=` (default: `1, 2, 3`). `{{index}}` MUST NOT be declared in `var=` or `keys=`.
 
 ### C. Reserved Alias Names (FORBIDDEN)

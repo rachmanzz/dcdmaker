@@ -4,6 +4,7 @@ go 1.25.8
 
 require (
 	github.com/openai/openai-go/v3 v3.42.0
+	github.com/rachmanzz/words-xml v0.1.1-7
 	google.golang.org/genai v1.62.0
 )
 
@@ -20,7 +21,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.16 // indirect
 	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/rachmanzz/words-xml v0.1.1-6 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

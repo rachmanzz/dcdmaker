@@ -4,7 +4,7 @@ go 1.25.8
 
 require (
 	github.com/openai/openai-go/v3 v3.42.0
-	github.com/rachmanzz/words-xml v0.1.1-7
+	github.com/rachmanzz/words-xml v0.1.1-8
 	google.golang.org/genai v1.62.0
 )
 

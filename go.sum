@@ -33,10 +33,6 @@ github.com/openai/openai-go/v3 v3.42.0 h1:16Skv1hpEhSm3imZpPGSeEBDUgVJJA9cHryKGG
 github.com/openai/openai-go/v3 v3.42.0/go.mod h1:cdufnVK14cWcT9qA1rRtrXx4FTRsgbDPW7Ia7SS5cZo=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/rachmanzz/words-xml v0.1.1-8 h1:AvbXO9B3/Rn0J7X4HCn43DkPOG93EW1CK86ObE34nOU=
-github.com/rachmanzz/words-xml v0.1.1-8/go.mod h1:6cuSBDBFhDJEyhA3pqolvuNoxshjSgIeJBR7TDdbxU8=
-github.com/rachmanzz/words-xml v0.1.1-9 h1:L6IEMCuqObsi6mp3U6iPOewHPLMgQyfVA6vZXr/a4K8=
-github.com/rachmanzz/words-xml v0.1.1-9/go.mod h1:6cuSBDBFhDJEyhA3pqolvuNoxshjSgIeJBR7TDdbxU8=
 github.com/rachmanzz/words-xml v0.1.1-11 h1:GVJeV7lPq8jqGZWPMFfx2T8qyPezp/sesVYFGdhDE0U=
 github.com/rachmanzz/words-xml v0.1.1-11/go.mod h1:6cuSBDBFhDJEyhA3pqolvuNoxshjSgIeJBR7TDdbxU8=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=

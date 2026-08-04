@@ -1,4 +1,4 @@
-# Source Document Format — words-XML v1.0.1
+# Source Document Format — words-XML v1.1.0
 
 ## What is words-XML?
 
@@ -14,18 +14,24 @@ words-XML is a structured representation of DOCX (OOXML) that has been deliberat
 
 **HTML-like but NOT HTML:**
 - Uses familiar element names: `<p>`, `<h1>`-`<h9>`, `<ul>`, `<ol>`, `<li>`, `<table>`, `<tr>`, `<td>`, `<th>`, `<b>`, `<i>`, `<u>`, `<s>`, `<a>`
-- Attributes are space-separated (not `key="value"` pairs like HTML)
+- Attributes use standard XML syntax: `key="value"` pairs (e.g., `<p c="MyStyle" lang="en">`)
 - Attribute names are abbreviated but meaningful: `c` (custom style), `at` (borders), `dir` (direction), `lang` (language)
 - Self-closing tags use `/>` syntax
 
 **Some attributes are unique to words-XML:**
 - `at` — compact border representation (not found in HTML or OOXML)
-- `c` — custom style name preservation
+- `c` — custom style name preservation (NOT CSS class)
 - `s:page`, `s:line`, `s:gap`, `s:indent` — layout primitives in `<style>` block
 
 ### NOT HTML
 
 Do NOT apply HTML/CSS rules. This is a purpose-built XML format for document representation.
+
+**Critical differences from HTML:**
+- `c` attribute is NOT a CSS class — it preserves the original Word style name (e.g., `<h1 c="Heading1Custom">`)
+- Style elements use `s:` namespace prefix (e.g., `<s:page>`, `<s:gap>`), not `<style>` HTML tag
+- No CSS selectors or cascade — formatting is explicit via attributes
+- `<style>` block contains layout primitives (`<s:page>`, `<s:gap>`, etc.), not CSS rules
 
 ### NOT OOXML
 
@@ -45,7 +51,7 @@ The format operates in one of two modes (`mode` attribute on root `<words>`):
 ## Root Structure
 
 ```xml
-<words xmlns="urn:words:v1" xmlns:s="urn:words:v1:style" version="1.0.1" mode="semantic">
+<words xmlns="urn:words:v1" xmlns:s="urn:words:v1:style" version="1.1.0" mode="semantic">
   <meta>...</meta>          <!-- optional, before <style> -->
   <style>...</style>        <!-- required, before <write> -->
   <header id="n">...</header>  <!-- optional, per section -->
@@ -75,6 +81,11 @@ Contains properties from `docProps/core.xml`. Only non-empty fields emitted.
 
 The `<style>` block is XML (not INI, not HTML). It uses the `s:` namespace prefix for style primitives.
 
+**Namespace clarification:**
+- All elements inside `<style>` use `s:` prefix: `<s:page>`, `<s:gap>`, `<s:line>`, `<s:indent>`, `<s:align>`, `<s:cols>`, `<s:col>`, `<s:tab>`, `<s:theme>`, `<s:custom>`
+- The `<style>` element itself uses NO prefix
+- All elements outside `<style>` (in `<write>`, `<header>`, `<footer>`, `<notes>`) use NO namespace prefix
+
 Minimum required `<style>` block:
 
 ```xml
@@ -82,6 +93,24 @@ Minimum required `<style>` block:
   <s:page size="A4" mt="0.75" mb="0.75" ml="0.75" mr="0.75" mh="0.5" mf="0.5"/>
 </style>
 ```
+
+### Unit Declaration
+
+**`unit` attribute on `<style>`** declares the default unit for all numeric layout values.
+
+**Rules:**
+- Allowed values: `in` (inch, **recommended default**), `pt` (point), `px` (pixel), `cm`, `mm`
+- A bare number is interpreted in the declared unit (e.g., `ml="54"` with `unit="in"` means 54 inches)
+- All OOXML twips-based physical lengths are converted to the declared unit before emitting
+
+**Point-based values are NEVER converted:**
+- Font sizes (`size`, `sizeCS`) are ALWAYS in `pt` with explicit `pt` suffix
+- Example: `size="11pt"` — NOT converted to inches even when `unit="in"`
+- These are inherently point-based (typography standard) and stay in `pt`
+
+**Line spacing exception:**
+- `lineSpacing` with `lineRule="auto"` is a dimensionless multiplier, NOT a physical length
+- Example: `value="1.5"` means 1.5× line height — no unit conversion applies
 
 ### Style Primitives
 
@@ -253,11 +282,13 @@ or `even`. Content uses same block elements as `<write>`.
 
 - **`c`** — preserves original custom style name (e.g., `<h1 c="MyCustomHeading">`).
   Not emitted for standard styles (Heading1-9, Normal, etc.).
+  **NOT a CSS class** — do not apply CSS class logic. This is the Word style name.
 - **`at`** — compact border representation (unique to words-XML).
   Format: `at="[side] [width] [style][space] [color]; ..."`
   Side: `bt`(top), `bb`(bottom), `bl`(left), `br`(right)
   Style: `s`(single), `d`(double), `ds`(dashed), `dt`(dotted), `n`(none)
   Example: `<p at="bb 12 s1 #000000"/>`
+  **NOT CSS border syntax** — this is a compact, space-separated format specific to words-XML.
 - **`dir`** — text direction: `rtl` or `ltr`.
 - **`lang`** — language tag (BCP 47) on block elements and `<span>`.
 - **`valign`** — vertical alignment: `top`, `center`, `baseline` on `<p>`, `<td>`, `<th>`.
@@ -299,7 +330,7 @@ After `</write>`, before `</words>`:
 ## Example
 
 ```xml
-<words xmlns="urn:words:v1" xmlns:s="urn:words:v1:style" version="1.0.1" mode="semantic">
+<words xmlns="urn:words:v1" xmlns:s="urn:words:v1:style" version="1.1.0" mode="semantic">
   <meta>
     <title>Sample Document</title>
     <author>John Smith</author>

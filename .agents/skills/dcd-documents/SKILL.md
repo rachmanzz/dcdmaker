@@ -832,7 +832,166 @@ Use meaningful aliases that reflect the data (e.g., `person`, `founder`, `order`
 </ol>                              # Use <loop:ol> instead; a standard <loop> inside a static list is forbidden
 ```
 
-## 9. METADATA
+## 9. CONDITIONALS
+
+Conditionally render content based on data values using `<if>`, `<elif>`, and `<else>`.
+
+### Tags
+
+| Tag | Description |
+|-----|-------------|
+| `<if var="expr">...</if>` | Render content only when `expr` is true. Standalone (simple) form. |
+| `<w-if use=[...]>...</w-if>` | Wrapper for an if/elif/else chain. MUST list every variable used in `use=[...]`. |
+| `<elif var="expr">...</elif>` | Additional branch inside `<w-if>` (optional, any number). |
+| `<else>...</else>` | Fallback branch inside `<w-if>` (optional, at most one, and MUST be last). |
+
+### Simple `<if>` (standalone)
+
+```text
+<if var="{{info.status}} == 'active'">
+<p>Visible only when status is active.</p>
+</if>
+```
+
+Rules:
+
+* Standalone `<if>` renders its content only when the condition is true; otherwise the content is dropped.
+* Both `{{path}}` and bare paths are supported: `var="{{info.status}} == 'active'"` or `var="info.status == 'active'"`.
+* A bareword resolves to data when present; otherwise it is treated as a **literal string**.
+* A `{{path}}` left unresolved after variable resolution means the variable is missing and is treated as **empty** (use with `is empty`).
+* `<elif>` and `<else>` are NOT allowed outside a `<w-if>` wrapper.
+
+### `<w-if>` chain
+
+```text
+<w-if use=[info.role]>
+<if var="info.role == 'admin'">
+<p>Admin panel</p>
+</if>
+<elif var="info.role == 'editor'">
+<p>Editor workspace</p>
+</elif>
+<else>
+<p>Read-only view</p>
+</else>
+</w-if>
+```
+
+Rules:
+
+* `<w-if>` MUST contain exactly one `<if>` first, then zero or more `<elif>`, then at most one `<else>` (last).
+* Branches close themselves: `<if>...</if>`, `<elif>...</elif>`, `<else>...</else>`.
+* No other content is allowed between the branch tags inside `<w-if>` (compile error).
+* The first branch whose condition is true is rendered; the rest are dropped. If no branch matches and there is no `<else>`, nothing is rendered.
+* Nested `<if>`/`<w-if>` blocks are allowed inside any branch body.
+
+### `use=` — declared variables
+
+`use=[...]` MUST list every variable referenced by the branch conditions:
+
+* Root keys and dotted paths: `info`, `info.role`, `founder.name`
+* Loop aliases and fields: `x`, `x.done`
+* Loop index variables: `index`, `lastIndex`, `totalIndex`
+
+Any reference in a branch `var=` that is not covered by a `use=` entry is a **compile error**. A reference is covered when it equals a `use=` entry or is an ancestor/descendant of one (e.g. `use=[info]` covers `info.role`).
+
+Literals inside `<w-if>` conditions MUST be quoted — barewords are always variables: `var="info.role == 'admin'"`.
+
+### Operators
+
+| Operator | Meaning |
+|----------|---------|
+| `==`, `!=` | Equality / inequality |
+| `>`, `>=`, `<`, `<=` | Comparison (numeric when both sides are numbers, else string) |
+| `is empty` | Operand is an empty or missing value |
+| `is not empty` | Operand has a value |
+| `and` | Logical AND (binds tighter than `or`) |
+| `or` | Logical OR |
+| `( ... )` | Grouping |
+
+Examples:
+
+```text
+<if var="info.total > 100 and (info.limit == 0 or info.limit >= info.total)">
+<if var="{{missing}} is empty">placeholder</if>
+<if var="info.name is not empty">{{info.name}}</if>
+<if var="count >= 5 and count <= 10">in range</if>
+```
+
+### Conditions inside loops
+
+Inside a loop, bare `x.field` references in `var=` and `use=[...]` resolve per item, and the loop index variables are available:
+
+```text
+<loop:ul x from items>
+<li>
+<if var="x.done == 'yes'">
+<p><b>{{x.label}}</b></p>
+</if>
+<if var="index == lastIndex">
+<p><i>Last item: {{x.label}}</i></p>
+</if>
+</li>
+</loop:ul>
+```
+
+* `x.field` — the current item's field
+* `index` — current position (1-based, respects `indexType`)
+* `lastIndex` / `totalIndex` — last position / total count
+
+The `{{...}}` forms work too (`{{x.field}}`, `{{index}}`, `{{lastIndex}}`, `{{totalIndex}}`). To test a possibly missing field, prefer `{{x.field}} is empty`.
+
+### Evaluation order
+
+Conditions are evaluated after variable resolution (`{{...}}`) and loop expansion, so values are final before any branch is chosen.
+
+---
+
+## 10. LINKS
+
+Internal and external hyperlinks.
+
+From data section:
+
+```ini
+[section 0]
+name=source
+var=source
+keys=url, label
+
+--- BODY ---
+<a={{source.url}}>{{source.label}}</a>
+```
+
+Static:
+
+```text
+<a=https://example.com>visit website</a>
+```
+
+Inline:
+
+```text
+<p>click <a={{source.url}} target=_blank>here</a> for more info</p>
+```
+
+### Properties
+
+| Property | Example | Description |
+|----------|---------|-------------|
+| `target` | `_blank` | Open in new tab |
+| `color` | `#0055cc` | Link color |
+| `underline` | `true` | Underline |
+
+### Bookmark
+
+```text
+<a=#chapter1>see Chapter 1</a>
+```
+
+---
+
+## 11. METADATA
 
 ```ini
 [title]
@@ -843,7 +1002,7 @@ author=   # accessible as {{author}}
 
 ```
 
-## 10. HEADER & FOOTER
+## 12. HEADER & FOOTER
 
 Header and footer for document pages.
 
@@ -927,7 +1086,7 @@ margin=0.2
 first-page=false
 ```
 
-## 11. THE PREDICTABLE VS. UNPREDICTABLE RULE (ZERO TOLERANCE)
+## 13. THE PREDICTABLE VS. UNPREDICTABLE RULE (ZERO TOLERANCE)
 
 The predictable input defines the initial schema available to the compiler.
 

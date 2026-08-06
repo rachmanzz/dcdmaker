@@ -44,7 +44,7 @@ The format operates in one of two modes (`mode` attribute on root `<words>`):
 - **`mode="semantic"`** (default): stripped-down for AI consumption.
   - Whitespace normalized (collapsed spaces, trimmed newlines).
   - Tracked changes (`w:ins`/`w:del`) dropped entirely.
-- **`mode="lossless`**: preserves additional metadata for round-tripping.
+- **`mode="lossless"`**: preserves additional metadata for round-tripping.
   - Whitespace NOT normalized (original spacing preserved).
   - Tracked changes emitted as `<ins>`/`<del>` with `id`/`author`/`date` attrs.
 
@@ -118,11 +118,11 @@ Minimum required `<style>` block:
 |-----------|---------|----------------|
 | `<s:page>` | Page geometry | `size`, `w`, `h`, `mt`, `mb`, `ml`, `mr`, `mh`, `mf` |
 | `<s:gap>` | Paragraph/heading spacing | `el`, `c`, `before`, `after` |
-| `<s:line>` | Line spacing | `el`, `value`, `rule` |
-| `<s:indent>` | Paragraph indentation | `el`, `left`, `right`, `firstLine`, `hanging` |
-| `<s:align>` | Paragraph alignment | `el`, `value` |
+| `<s:line>` | Line spacing | `el`, `c`, `value`, `rule` |
+| `<s:indent>` | Paragraph indentation | `el`, `c`, `left`, `right`, `firstLine`, `hanging` |
+| `<s:align>` | Paragraph alignment | `el`, `c`, `value` |
 | `<s:cols>` | Multi-column layout | `n`, `space` |
-| `<s:col>` | Column/grid widths | `ref`, `width`, `unit` |
+| `<s:col>` | Column/grid widths | `ref`, `w` |
 | `<s:tab>` | Tab stop definition | `el`, `pos`, `align`, `leader` |
 | `<s:theme>` | Global font/color defaults | `font`, `fontEA`, `fontCS`, `fg`, `bg` |
 | `<s:custom>` | Custom style definition | `name`, `basedOn`, `type`, formatting attrs |
@@ -150,26 +150,34 @@ Multiple sections: `<s:page>` MAY appear more than once, once per document secti
 
 ```xml
 <s:line el="p" value="1.5" rule="auto"/>
+<s:line el="p" c="Heading1" value="1.5" rule="auto"/>
 ```
 
-`value` = multiplier. `rule` = `auto`|`exact`|`atLeast`.
+`c` = optional style name (heading-specific line spacing). `value` = multiplier for
+`rule="auto"`, or a physical length in the declared unit for `rule="exact"`/`atLeast`.
+`rule` = `auto`|`exact`|`atLeast`.
 
 ### `<s:indent>` — Paragraph Indentation
 
 ```xml
 <s:indent el="p" left="0.5" right="0" firstLine="0.25" hanging="0"/>
+<s:indent el="p" c="Heading1" left="0.25"/>
 ```
 
-`left`/`right`/`firstLine`/`hanging` in declared unit. `firstLine` and `hanging` are
-mutually exclusive (both positive; Word stores one as positive, other as negative/zero).
+`el` = target element, `c` = optional style name. `left`/`right`/`firstLine`/`hanging`
+in declared unit. `firstLine` and `hanging` are mutually exclusive (both positive; Word
+stores one as positive, other as negative/zero).
 
 ### `<s:align>` — Paragraph Alignment
 
 ```xml
 <s:align el="p" value="both"/>
+<s:align el="p" c="Heading1" value="center"/>
 ```
 
-`value` = `left`|`center`|`right`|`both`.
+`el` = target element, `c` = optional style name. `value` = `left`|`center`|`right`|`both`.
+Per-paragraph overrides: when a paragraph's alignment differs from its style's, an
+additional `<s:align>` entry is emitted for that paragraph.
 
 ### `<s:cols>` — Multi-Column Layout
 
@@ -182,19 +190,27 @@ mutually exclusive (both positive; Word stores one as positive, other as negativ
 ### `<s:col>` — Column/Grid Widths
 
 ```xml
-<s:col ref="1" width="2.50" unit="pt"/>
+<s:col ref="1" w="2.50"/>
 ```
 
-Links to `<table id="n">` via `ref` attribute (1-based document order).
+Links to `<table id="n">` via `ref` attribute (1-based document order). `w` = column
+width in the declared unit. Tables without a `w:tblGrid` emit no `<s:col>`.
 
 ### `<s:tab>` — Tab Stop Definition
 
 ```xml
 <s:tab el="p" pos="1.0" align="left" leader="none"/>
+<s:tab el="h1" pos="6.25" align="right" leader="dot"/>
 ```
 
-`el` = target element, `pos` = position (in declared unit), `align` = alignment,
-`leader` = leader character style.
+`el` = target element (`p` or `h1`), `pos` = position (in declared unit), `align` =
+`left`|`center`|`right`|`decimal`, `leader` = `none`|`dot`|`dash`|`underscore`|`bar`.
+
+The global `<s:tab>` list is an **aggregate** (deduplicated by `{element, position,
+alignment, leader}`; content-derived tabs first, then style-derived). It cannot express
+which stop belongs to which paragraph — each `<p>` therefore ALSO carries a `tabs=".."`
+attribute listing its **effective** stops (see the `tabs` Attribute section). Consumers
+MUST use the per-paragraph `tabs` attribute when present to resolve `<tab/>`.
 
 ### `<s:theme>` — Global Defaults (Font + Color Tokens)
 
@@ -207,15 +223,25 @@ Optional global defaults resolved from `w:docDefaults` + theme fontScheme in `th
 `fg` = dk1 (text color), `bg` = lt1 (background color).
 Priority: inline run > style definition > global default.
 
+If `w:docDefaults` is absent or `styles.xml` cannot be parsed, the baseline falls back to
+**Times New Roman 11pt**.
+
+**Baseline suppression:** `<span>` attributes are suppressed when they match the
+document's DocDefaults/theme defaults (e.g., if the default font is Arial 11pt and a run
+also uses Arial 11pt, no `<span>` is emitted). This means consumers MUST apply
+DocDefaults/`<s:theme>` as the baseline BEFORE interpreting per-run `<span>` attributes.
+
 ### `<s:custom>` — Custom Style Definition
 
 ```xml
 <s:custom name="MyHeading" basedOn="Heading1" type="paragraph"
-  font="Arial" size="24" color="2B5797" bold="true"
+  font="Arial" size="24pt" color="2B5797" bold="true"
   alignment="left" spacingBefore="18" spacingAfter="12"/>
 ```
 
-Only emitted for non-standard custom styles. Formatting attributes: font, fontEA,
+Only emitted for non-standard custom styles. `size`/`sizeCS` are point values and MUST
+carry an explicit `pt` suffix (e.g., `size="11pt"`), never a bare number. `color` and
+`borderColor` are emitted WITHOUT the leading `#`. Formatting attributes: font, fontEA,
 fontCS, size, sizeCS, color, bold, italic, underline, strikethrough, smallCaps,
 uppercase, alignment, spacingBefore, spacingAfter, lineSpacing, lineRule,
 indentLeft, indentRight, indentFirst, indentHanging, borderWidth, borderColor,
@@ -243,20 +269,21 @@ or `even`. Content uses same block elements as `<write>`.
 
 | Tag | Description | Attributes |
 |-----|-------------|------------|
-| `<h1>`..`<h9>` | Heading levels 1-9 | `c`, `at`, `dir`, `lang`, font/size/color overrides |
-| `<p>` | Paragraph | `c`, `at`, `dir`, `lang`, `valign`, font/size/color overrides |
+| `<h1>`..`<h9>` | Heading levels 1-9 | `c`, `at`, `dir`, `lang`, `align`, font/size/color overrides, extended block attrs |
+| `<p>` | Paragraph | `c`, `at`, `dir`, `lang`, `valign`, `align`, font/size/color overrides, extended block attrs |
 | `<pre>` | Code/monospace block (whitespace preserved verbatim) | `c`, `lang` |
 | `<blockquote>` | Quoted block | `c`, `lang` |
-| `<ul>` | Unordered list | `type` |
-| `<ol>` | Ordered list | `type`, `start` |
-| `<li>` | List item | (inline children, may nest `<ul>`/`<ol>`) |
+| `<ul>` | Unordered list (`type` from `numFmt`, e.g. `bullet`) | `type` |
+| `<ol>` | Ordered list (`type` from `numFmt`: `decimal`, `lowerLetter`, etc.) | `type`, `start` |
+| `<li>` | List item — clean container: NEVER carries block geometry; item block attrs live on the FIRST `<p>` child; continuation `<p>`s absorbed into the item; may nest `<ul>`/`<ol>` | (none) |
 | `<table>` | Table | `id`, `cols`, `c`, `at`, `width`, `align`, `caption`, `summary`, `indent`, `cellSpacing` |
 | `<tr>` | Table row | — |
 | `<th>` | Table header cell | `colspan`, `rowspan`, `valign`, `textDir`, `noWrap`, `at` |
 | `<td>` | Table data cell | `colspan`, `rowspan`, `valign`, `textDir`, `noWrap`, `at` |
-| `<section-break/>` | Section boundary | `type`, `layout`, `columns` |
-| `<img/>` | Image placeholder | `alt`, `src`, `width`, `height` |
+| `<img/>` | Image placeholder — PLACEHOLDER ONLY (images excluded by policy) | `alt` |
 | `<fn-ref/>` | Footnote/endnote marker | `id`, `type` (`footnote`/`endnote`) |
+
+**List structure (clean-container rule):** `<li>` is a clean container. The first `<p>` is the item and carries the item's block attributes (`indentLeft/Right/First/Hanging`, `spacingBefore/After`, `lineSpacing`, `lineRule`, `tabs`, `c`, etc.). Continuation `<p>` blocks emit only their own geometry and never inherit a fabricated indent from the item. A custom `pStyle` on the source item is preserved as `c="..."` on the first `<p>`, exactly as for non-list paragraphs.
 
 ### Inline Formatting Tags
 
@@ -295,6 +322,56 @@ or `even`. Content uses same block elements as `<write>`.
 - **`textDir`** — text direction in table cells.
 - **`noWrap`** — no-wrap flag on table cells (`true`).
 
+### Extended Block Attributes (on `<p>`, `<h1>`-`<h9>`, `<blockquote>`, `<pre>`)
+
+These carry effective per-paragraph layout values. Each value is the paragraph's own
+direct setting, else the nearest style in the `basedOn` chain that defines one.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `align` | string | Paragraph alignment: `left`, `center`, `right`, `both` (justify). `left` suppressed (default) |
+| `shd` | string | Paragraph shading (hex color or pattern) |
+| `spacingBefore` | float | Space before (declared unit) |
+| `spacingAfter` | float | Space after (declared unit) |
+| `lineSpacing` | float | Line spacing (multiplier or length in declared unit) |
+| `lineRule` | string | `auto`, `exact`, `atLeast`. `auto` suppressed (default) |
+| `indentLeft` | float | Left indent (declared unit) |
+| `indentRight` | float | Right indent (declared unit) |
+| `indentFirst` | float | First-line indent (declared unit) |
+| `indentHanging` | float | Hanging indent (declared unit) |
+| `tabs` | string | Effective tab stops for THIS paragraph (see `<s:tab>`) |
+| `keepNext` | bool | Keep with next paragraph |
+| `keepLines` | bool | Keep all lines together |
+| `widowControl` | bool | Allow widow/orphan lines |
+| `sectionBreak` | string | `nextPage`, `continuous`, `evenPage`, `oddPage` (from `w:pPr/w:sectPr`) |
+| `revisionAuthor` | string | Tracked change author |
+| `revisionDate` | string | Tracked change date (ISO 8601) |
+
+Example:
+
+```xml
+<p shd="#f0f0f0" keepNext="true" keepLines="true" widowControl="true"
+   spacingBefore="0.08" spacingAfter="0.11" lineSpacing="1.5"
+   indentLeft="0.5" indentHanging="0.25" tabs="0.32 0.63 0.95 1.26"
+   sectionBreak="nextPage" revisionAuthor="John Doe" revisionDate="2025-01-15T10:30:00Z">text</p>
+```
+
+Per-paragraph attributes override style-level defaults (`<s:gap>`, `<s:line>`, `<s:indent>`, `<s:align>`).
+
+### `tabs` Attribute (per-paragraph effective tab stops)
+
+Resolves `<tab/>` within the paragraph. Present when the effective set is non-empty.
+
+- Format: space-separated stops, each `pos` in the declared unit, with optional
+  `@<align>[:<leader>]` when different from the defaults `left`/`none`:
+  - `tabs="0.32 0.63 0.95 1.26"`
+  - `tabs="6.25@right:dot"`
+- Effective set = the paragraph's own `w:tabs` merged over the stops inherited from its
+  style chain (nearest style defining `w:tabs` wins). A direct stop overrides an inherited
+  stop at the same position; `w:val="clear"` removes the inherited stop (never emitted in output).
+- Consumers MUST use this attribute when present to resolve `<tab/>` (fall back to the
+  global `<s:tab>` list only for paragraphs without `tabs`).
+
 ## `<notes>` — Notes Container (optional)
 
 After `</write>`, before `</words>`:
@@ -315,11 +392,11 @@ After `</write>`, before `</words>`:
 - Lists grouped by `numId` + `ilvl` + `abstractNumId` + restart state.
 - Tables with `colspan`/`rowspan`, header rows as `<th>`.
 - Textbox content unwrapped into `<write>` as sibling elements.
-- Page size/margins in `<s:page>`; section breaks as `<section-break/>`.
+- Page size/margins in `<s:page>`; section breaks as `sectionBreak="..."` attribute on the `<p>`.
 - Headers/footers in `<header>`/`<footer>` blocks.
 - Footnotes/endnotes: `<fn-ref/>` marker in `<write>`, `<fn>` body in `<notes>`.
 - Bookmarks in `<notes>` as `<bm>`, comments as `<comment>`.
-- Images: `<img>` placeholder with src/width/height/alt.
+- Images: `<img alt="..."/>` placeholder only (images excluded by policy).
 - `mode="semantic"`: whitespace normalized, tracked changes dropped.
 - `mode="lossless"`: whitespace preserved, tracked changes as `<ins>`/`<del>`.
 - Custom styles → `<s:custom>` in `<style>` + `c` attribute on element.

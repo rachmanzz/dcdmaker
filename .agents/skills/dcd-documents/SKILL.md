@@ -167,6 +167,7 @@ Usage:
 3. Apply via `style=<name>` on `<p>` or `<h1>`–`<h9>`
 4. Inline attributes on the tag override the named style
 5. Named style overrides the global `[style]` default
+6. Style names may contain spaces. When applying, wrap the name in double quotes: `<p style="Body Text Indent 2">`. In the section definition the name may be bare (`[style:paragraph Body Text Indent 3]`) or, for multi-word names, wrapped in quotes (`[style:paragraph "Body Text Indent 3"]`) — both register the same `Body Text Indent 3`.
 
 In lists:
 
@@ -412,9 +413,101 @@ Supported attributes:
 * `color`
 * `indent`
 * `hanging`
-* `tab-stops` (see Section 5.A.5)
+* `tab-stops` (see Section 5.B.5)
 
 Indentation values MUST use the document unit defined by `[style]`.
+
+#### 3. Paragraph Properties
+
+`<p>` and `<h1>`–`<h9>` accept the following paragraph-level attributes. `<li>` does NOT accept attributes — set them on the inner `<p>`.
+
+> **QUOTED VALUES:** Any attribute value may be wrapped in double quotes — this is REQUIRED when the value contains spaces (e.g. `style="Body Text Indent 3"`). Quoted values are stripped of their surrounding quotes; bare values must not contain spaces. Unquoted single-word values are unchanged and remain the common form.
+
+##### Indent
+
+| Property       | Example            | Description                                      |
+|----------------|--------------------|--------------------------------------------------|
+| `indent`       | `indent=0.5`       | Left indent (in document unit)                   |
+| `indent-right` | `indent-right=0.5` | Right indent (in document unit)                  |
+| `hanging`      | `hanging=0.25`     | Hanging indent (removed from first line)         |
+| `first-line`   | `first-line=0.5`   | Extra indent for first line only                 |
+
+`hanging` and `first-line` are mutually exclusive — if both are set, `first-line` takes precedence.
+
+##### Spacing
+
+| Property       | Example              | Description                                          |
+|----------------|----------------------|------------------------------------------------------|
+| `space-before` | `space-before=12pt`  | Space before paragraph (layout unit)                 |
+| `space-after`  | `space-after=6pt`    | Space after paragraph (layout unit)                  |
+| `line-height`  | `line-height=1.5`    | Line spacing: multiplier (bare number) or exact value with unit suffix (`12pt`, `0.17in`, `6mm`) |
+| `line-rule`    | `line-rule=exact`    | Line spacing rule: `auto` (default), `exact`, `atLeast`. Only applied when `line-height` is also set. |
+
+`line-height` accepts two forms:
+
+1. **Multiplier** — bare number (no unit suffix): `1.5`, `2.0`, `1.2`
+   - `line-height=1.5` → 1.5× normal line spacing
+   - `line-rule` defaults to `auto`
+
+2. **Exact** — value with unit suffix: `12pt`, `0.17in`, `6mm`, `1cm`
+   - `line-height=12pt` → exactly 12pt line height
+   - Use with `line-rule=exact` or `line-rule=atLeast`
+
+```text
+<p line-height=1.5>1.5× normal spacing</p>
+<p line-height=12pt line-rule=exact>exactly 12pt line height</p>
+<p line-height=0.17in line-rule=exact>exactly 0.17 inch</p>
+<p line-height=6mm line-rule=atLeast>minimum 6mm line height</p>
+```
+
+##### Borders
+
+| Property         | Example                 | Description                                                                  |
+|------------------|-------------------------|------------------------------------------------------------------------------|
+| `border`         | `border=1pt`            | Border on all sides (single line)                                            |
+| `border-bottom`  | `border-bottom=single`  | Border on one side — supported: `border-bottom`, `border-top`, `border-left`, `border-right` |
+
+Border color uses `border-color` (default `auto`).
+
+##### Pagination & Flow
+
+| Property        | Example                   | Description                                |
+|-----------------|---------------------------|--------------------------------------------|
+| `keep-next`     | `keep-next=true`          | Keep with next paragraph                   |
+| `keep-lines`    | `keep-lines=true`         | Keep lines together on same page           |
+| `section-break` | `section-break=true`      | Force section break before this paragraph  |
+| `widow-control` | `widow-control=false`     | Widow/orphan control (`true` / `false`)    |
+| `contextual-spacing`| `contextual-spacing=true` | Remove space between same-style paragraphs |
+
+##### Appearance
+
+| Property       | Example                  | Description                                        |
+|----------------|--------------------------|----------------------------------------------------|
+| `shading`      | `shading=#f0f0f0`        | Paragraph background color                         |
+| `outline-level`| `outline-level=1`        | Outline level 0–8 (used for TOC)                   |
+| `dir`          | `dir=rtl` / `dir=ltr`    | Text direction                                     |
+| `valign`       | `valign=center`          | Vertical alignment within line: `auto`, `top`, `center`, `baseline`, `bottom` |
+
+##### words-XML → DCD attribute mapping (MANDATORY)
+
+| words-XML attr | DCD attr | Notes |
+|----------------|----------|-------|
+| `align`        | `align`  | `both` MUST become `justify` (DCD has no `both`) |
+| `indentLeft`   | `indent` | |
+| `indentRight`  | `indent-right` | |
+| `indentFirst`  | `first-line` | |
+| `indentHanging`| `hanging` | |
+| `spacingBefore`| `space-before` | |
+| `spacingAfter` | `space-after` | |
+| `lineSpacing`  | `line-height` | `lineRule="auto"` → bare multiplier; `lineRule="exact"`/`atLeast` → value is a physical length in the declared unit and MUST get a unit suffix (bare would be misread as multiplier) |
+| `lineRule`     | `line-rule` | |
+| `shd`          | `shading` | |
+| `keepNext`     | `keep-next` | |
+| `keepLines`    | `keep-lines` | |
+| `widowControl` | `widow-control` | |
+| `sectionBreak` | `section-break` | `nextPage` → `true` |
+
+`tabs` (words-XML per-paragraph effective stops) MAY be skipped — the DCD `tab-stops` format differs and is optional.
 
 ---
 

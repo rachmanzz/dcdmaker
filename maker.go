@@ -5,10 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
-
-	"github.com/rachmanzz/words-xml/words"
 )
 
 type VarType int
@@ -169,13 +166,7 @@ func (m *Maker) Run(output string) error {
 }
 
 func (m *Maker) generate(data []byte) (string, error) {
-	var sourceStyleXML string
-	wordsResult, parseErr := words.ProcessDOCXBytes(data)
-	if parseErr == nil {
-		sourceStyleXML = extractStyleBlock(wordsResult.WordsXML)
-	}
-
-	originalPrompt := buildPrompt(m.userPrompt, m.predictableKeys, sourceStyleXML)
+	originalPrompt := buildPrompt(m.userPrompt, m.predictableKeys)
 	prompt := originalPrompt
 	ctx := context.Background()
 
@@ -276,17 +267,5 @@ func writeWordsXMLDebug(name string, content string) {
 	fpath := filepath.Join("dcd_temp", fmt.Sprintf("words_xml_%s.xml", name))
 	os.WriteFile(fpath, []byte(content), 0644)
 	fmt.Fprintf(os.Stderr, "[words-debug] saved words XML to %s (%d bytes)\n", fpath, len(content))
-}
-
-func extractStyleBlock(wordsXML string) string {
-	start := strings.Index(wordsXML, "<style")
-	if start < 0 {
-		return ""
-	}
-	end := strings.Index(wordsXML[start:], "</style>")
-	if end < 0 {
-		return ""
-	}
-	return wordsXML[start : start+end+len("</style>")]
 }
 

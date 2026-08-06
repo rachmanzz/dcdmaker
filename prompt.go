@@ -12,12 +12,16 @@ var dcdSpec string
 //go:embed .agents/skills/docx-preprosesor/SKILL.md
 var docxPreprocessorSpec string
 
-func buildPrompt(userPrompt string, predictableKeys []KeyDef, sourceStyleXML string) string {
+func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	var b strings.Builder
 
 	b.WriteString("Output ONLY raw DCD template syntax, no explanations, no markdown wrapping.\n")
 	b.WriteString("CRITICAL: Do NOT include, repeat, or echo back any part of the SOURCE DOCUMENT (<words> XML) below.\n")
 	b.WriteString("The source document is input only — never copy it into your response.\n\n")
+	b.WriteString("COMPLETENESS: Translate the source document fully. Classify every piece of source text as STATIC or DYNAMIC:\n")
+	b.WriteString("- STATIC text (paragraphs, headings, labels, fixed wording) MUST appear in the DCD template verbatim, exactly once, in the original order.\n")
+	b.WriteString("- DYNAMIC content (data values, names, dates, amounts — anything that will be filled by a variable) MUST be replaced by its {{var}} / {{var.field}} placeholder. Never write the source value literally for dynamic content; never drop it either.\n")
+	b.WriteString("Never drop, skip, omit, merge, truncate, reorder, or summarize any source text. The full document must be representable from your template.\n\n")
 
 	b.WriteString("=== DCD DSL SPECIFICATION ===\n")
 	b.WriteString(dcdSpec)
@@ -26,14 +30,6 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef, sourceStyleXML str
 	b.WriteString("=== SOURCE DOCUMENT FORMAT ===\n")
 	b.WriteString(docxPreprocessorSpec)
 	b.WriteString("\n\n")
-
-	if sourceStyleXML != "" {
-		b.WriteString("=== SOURCE DOCUMENT STYLE ===\n")
-		b.WriteString("Extract the [style] and [style:heading-N] blocks from the following source document style.\n")
-		b.WriteString("Use this as the EXACT reference for page layout, margins, fonts, line-height, and heading styles.\n")
-		b.WriteString(sourceStyleXML)
-		b.WriteString("\n\n")
-	}
 
 	if len(predictableKeys) > 0 {
 		b.WriteString("=== PREDICTED VARIABLES ===\n\n")

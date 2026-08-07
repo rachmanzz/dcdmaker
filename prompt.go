@@ -24,7 +24,10 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("Never drop, skip, omit, merge, truncate, reorder, or summarize any source text. The full document must be representable from your template.\n\n")
 	b.WriteString("INLINE ATTRIBUTES: Preserve inline tag attributes verbatim when the DCD equivalent tag supports them. Examples: <u underline=\"double\"> → <set:u underline=double>; <span highlight=\"yellow\"> → <mark color=yellow>; <a href=...> keeps target/color/underline. Do NOT strip, rename, or flatten an inline attribute into a [style] block or a paragraph attribute when the inline tag accepts it. Only fall back when DCD has no inline equivalent.\n")
 	b.WriteString("TAB PRESERVATION: If the source document (words-xml) defines tab stops on a paragraph AND uses <tab/> inside that paragraph, BOTH must be preserved in DCD. The tabs attribute on <p> defines positions; <tab/> marks where tabs occur. Never drop either — they work together.\n")
-	b.WriteString("NUMERIC PRECISION: Copy every numeric attribute value (indent, tab, spacing, width, height, etc.) character-by-character from the source. NEVER round, recalculate, convert units, or 'fix' values. Preserve exact precision: 0.32 stays 0.32, not 0.3 or 1/3.\n\n")
+	b.WriteString("NUMERIC PRECISION: Copy every numeric attribute value (indent, tab, spacing, width, height, etc.) character-by-character from the source. NEVER round, recalculate, convert units, or 'fix' values. Preserve exact precision: 0.32 stays 0.32, not 0.3 or 1/3.\n")
+	b.WriteString("NAMED STYLES: Do NOT define unused [style:paragraph] or [style:heading-N]. Create a named style ONLY when ≥2 elements share an identical set of non-default properties. Never create single-use named styles.\n")
+	b.WriteString("ATTRIBUTE DEDUPLICATION: Do NOT repeat [style] properties on every paragraph. Emit inline attributes ONLY when the value differs from the applicable default (precedence: inline > named style > [style]).\n")
+	b.WriteString("SOURCE-ONLY ATTRIBUTES: Do NOT add tabs= or any other attribute that does NOT exist in the source document. Only preserve what the source defines.\n\n")
 
 	b.WriteString("=== DCD DSL SPECIFICATION ===\n")
 	b.WriteString(dcdSpec)

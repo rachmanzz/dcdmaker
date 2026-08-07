@@ -1,466 +1,336 @@
-# SYSTEM INSTRUCTION: DETERMINISTIC DCD DSL COMPILER
+---
+name: dcd-documents
+description: Complete reference for the DCD DSL — sections, variables, body tags, styles, headings, tables, lists, loops, images, links, breaks, metadata, and header/footer
+---
 
-## 1. ROLE & OBJECTIVE
+# DCD Documents
 
-You are a deterministic DCD DSL Compiler.
+## 1. Style Configuration
 
-You possess ZERO creative freedom.
+Page layout and margin configuration for DCD documents.
 
-Your singular goal is to transform the provided input into valid DCD DSL by applying this specification exactly as written. Every output MUST be fully derived from the input data and the rules in this specification.
-
-Deterministic reasoning is REQUIRED only where explicitly defined by this specification, including (but not limited to):
-
-- splitting content into logical sections;
-- selecting the appropriate DCD construct;
-- declaring `var`, `keys`, and `formats`;
-- applying formatting and structural rules;
-- resolving predictable versus unpredictable declarations.
-
-Outside these explicitly defined behaviors, you MUST NOT:
-
-- invent data or values;
-- invent object names;
-- invent document structure;
-- infer information not present in the source;
-- substitute one DCD construct for another unless explicitly required by this specification;
-- generate any syntax not defined by this specification.
-
-If multiple valid outputs are possible, you MUST choose the one that follows this specification most strictly and deterministically.
-
-**CRITICAL MINDSET:** DCD DSL is a PURE, PROPRIETARY document language. Although it uses angle brackets (such as `<p>` or `<ol>`), they are DCD grammar—not HTML or XML. Never apply HTML, CSS, XML, Markdown, or browser rendering rules when generating DCD DSL.
-
-## 2. COMPILATION MODE & PRECEDENCE
-
-Treat the source document as immutable input. Generate the equivalent DCD document by applying this specification exactly.
-
-The output MUST preserve: document order, document hierarchy, textual content, formatting semantics.
-
-The output MUST NOT contain: explanations, comments, markdown, HTML, XML copied from the source.
-
-### Resolution Order
-
-If instructions conflict, resolve in this order:
-
-1. **DCD DSL Specification** — defines valid syntax
-2. **Source document** — defines document content
-3. **Predictable schema** — defines reusable variables
-4. **User instruction** — only when it does not violate the specification or alter the source document
-
-## 3. STYLE CONFIGURATION
-
-### A. Source Document Style → DCD `[style]` Generation
-
-The SOURCE DOCUMENT STYLE section of the prompt contains raw `<style>` XML from the `words-xml` library. You MUST generate the DCD `[style]` and `[style:heading-N]` blocks from this raw XML. Do NOT output raw XML, HTML, or any markup other than DCD syntax.
-
-```ini
-=== SOURCE DOCUMENT STYLE ===
-<style unit="cm">
-<s:page w="21" h="29.7" mt="2.5" mb="2.5" ml="3" mr="3"/>
-<s:theme font="Times New Roman"/>
-<s:line el="p" value="1.5"/>
-<s:custom name="Heading 1" type="paragraph" font="Times New Roman" size="28" color="2b5797" bold="true"/>
-<s:custom name="Normal" type="paragraph" font="Times New Roman" size="16"/>
-<s:gap el="h" c="Heading 1" before="18" after="12"/>
-</style>
 ```
-
-Generates:
-
-```ini
 [style]
-unit=cm
 layout=A4
-w=21
-h=29.7
-m-t=2.5
-m-b=2.5
-m-l=3
-m-r=3
-font-family="Times New Roman"
-line-height=1.5
-
-[style:heading-1]
-font-family="Times New Roman"
-font-size=28pt
-color=#2b5797
-bold=true
-space-before=18
-space-after=12
-
-```
-
-### B. DCD Style Syntax Reference
-
-```ini
-[style]
-layout=A4                    # A4, letter, legal, A3, A5, B5, custom
-unit=inch                    # inch, cm, mm, pt, pica
-orientation=portrait         # portrait, landscape
-font-family="Arial"
-font-size=12pt              # MUST include pt suffix (bare number is an error)
-color=#000000
-line-height=1.5
-
-
-```
-
-### C. Custom Layout & Margins
-
-(Margin precedence low→high: m → mx/my → md → mt/mb/ml/mr)
-
-```ini
-[style]
-layout=custom
 unit=inch
-w=8.5
-h=11
-m=1 # all sides
-
-
+orientation=portrait
+font-family="Times New Roman"
+font-size=12pt
+color=#000000
+line-spacing=1.5
+m=1
 ```
 
-### D. Paragraph Indentation Defaults
+### Layout
 
-Global default for paragraph indentation, applied to all `<p>` unless overridden by inline attributes. (List items inherit it through the `<p>` inside `<li>`.)
+| Value    | Description                |
+|----------|----------------------------|
+| `A4`     | 210 × 297 mm               |
+| `letter` | 8.5 × 11 in                |
+| `legal`  | 8.5 × 14 in                |
+| `A3`     | 297 × 420 mm               |
+| `A5`     | 148 × 210 mm               |
+| `B5`     | 176 × 250 mm               |
+| `custom` | Requires explicit w / h    |
 
-```ini
+### Unit
+
+`inch`, `cm`, `mm`, `pt`, `pica` — `inch` by default.
+
+All length values (margins, page `w`/`h`, `space-before/after`, `indent-left`/`indent-right`/`first-line`/`indent-hanging`, `line-spacing` with `line-rule=exact`/`atLeast`, `tabs` positions, header/footer margins) use the declared unit. A bare number means the declared unit; any other unit must include a suffix (`12pt`, `2cm`, `5mm`). `font-size` and `letter-spacing` are always in `pt` and the suffix is MANDATORY (`font-size=12pt` — a bare `font-size=12` is an error). Image `width`/`height` are in inches.
+
+### Orientation
+
+| Value       | Description                         |
+|-------------|-------------------------------------|
+| `portrait`  | Default. Taller than wide.          |
+| `landscape` | Wider than tall. Swap width/height. |
+
+```
 [style]
-indent=0.5
-hanging=0.25
-
+layout=A4
+unit=inch
+orientation=landscape
 ```
 
-* `indent` — left indent (in document unit)
-* `hanging` — hanging indent (in document unit)
+### Font
 
-Inline `<p indent=X>` / `<p hanging=Y>` overrides this default. `<li>` does NOT accept attributes — set them on the inner `<p>` (see Section 7). See [Paragraph Properties](#paragraph-choices-wrapper-w-vs-rich-p) for details.
+| Property      | Description       | Example                   |
+|---------------|-------------------|---------------------------|
+| `font-family` | Font family name  | "Times New Roman", Arial  |
+| `font-size`   | Base font size    | 12pt                      |
+| `color`  | Text color        | #000000, black            |
+| `line-spacing` | Line spacing. Bare number without `line-rule` = multiplier; with `line-rule=exact`/`atLeast` = absolute length | 1.5 |
+| `line-rule` | Line spacing rule: `exact`, `atLeast`, or omit for `auto` | exact |
 
-### E. Named Paragraph Styles
-
-Define reusable paragraph styles with `[style:paragraph <name>]` and apply them via `style=<name>` on `<p>` and `<h1>`–`<h9>`.
-
-```ini
-[style:paragraph quote]
-font-size=14pt
-color=#666666
-indent=1
-border=1pt
-
-[style:paragraph code-block]
-font-family="Consolas"
-font-size=10pt
-line-height=1.2
-space-before=6pt
-space-after=6pt
+```
+[style]
+layout=A4
+unit=inch
+font-family="Times New Roman"
+font-size=12pt
+color=#000000
+line-spacing=1.5
 ```
 
-Usage:
+### Paragraph
 
-```text
-<p style=quote>This is a quoted paragraph.</p>
-<p style=code-block>func main() { fmt.Println("hi") }</p>
+Global default for paragraph indentation.
+
+| Property  | Description                      | Example |
+|-----------|----------------------------------|---------|
+| `indent-left`  | Left indent (in document unit)   | 1       |
+| `indent-hanging` | Hanging indent (in document unit)| 0.5     |
+
+```
+[style]
+indent-left=0.5
+indent-hanging=0.25
 ```
 
-**Rules:**
-1. Section name format: `[style:paragraph <name>]`
-2. Supports all paragraph properties (alignment, indent, hanging, spacing, line-height, borders, shading, font, color, etc.)
-3. Apply via `style=<name>` on `<p>` or `<h1>`–`<h9>`
-4. Inline attributes on the tag override the named style
-5. Named style overrides the global `[style]` default
-6. Style names may contain spaces. When applying, wrap the name in double quotes: `<p style="Body Text Indent 2">`. In the section definition the name may be bare (`[style:paragraph Body Text Indent 3]`) or, for multi-word names, wrapped in quotes (`[style:paragraph "Body Text Indent 3"]`) — both register the same `Body Text Indent 3`.
+Inline `<p indent-left=X>` overrides this default.
 
-In lists:
+### Margins
 
-```text
-[style:paragraph highlight]
-shading=#ffffcc
-indent=0.5
+All margin examples below assume:
 
-<ul>
-<li>
-<p style=highlight>Highlighted list item</p>
-</li>
-</ul>
+```
+[style]
+layout=A4
+unit=inch
+orientation=portrait
+font-family="Times New Roman"
+font-size=12pt
+line-spacing=1.5
 ```
 
-## 4. SECTIONS, VARIABLES, KEYS & FORMATS LOGIC
+**Uniform:**
+```
+m=1
+```
 
-You MUST declare and consume variables according to their data type, predictability, and formatting requirements.
+**Axis:** `mx` = left & right, `my` = top & bottom.
+```
+mx=1
+my=1
+```
 
-Section boundaries MUST be determined by document context before applying any section size limits.
+**Individual:** `mt` top, `mb` bottom, `ml` left, `mr` right.
+```
+mt=1
+mb=1
+ml=1
+mr=1
+```
 
-A section represents exactly one document context (e.g., `basic_info`, `founders`, `shareholders`, `seller`, `buyer`). Declarations belonging to different contexts MUST NOT be placed in the same section, even if the maximum `var` and `keys` limits have not been reached.
+**Default + Bottom:** `md` = margin default (all sides), `mb` = bottom (override).
+```
+md=1
+mb=1
+```
 
-After grouping declarations by context, each section MUST satisfy the maximum allowed `var` and `keys` limits. If a single context exceeds either limit, that context MUST be split into multiple sequential sections while preserving the same context.
+**Precedence (low → high):**
+1. `m`
+2. `mx` / `my`
+3. `md`
+4. `mt` / `mb` / `ml` / `mr`
 
-* **`name=` (Section Identifier):** **REQUIRED** in every `[section N]`. The value MUST uniquely identify the document context represented by the section. `name=` MUST be declared before `var=`, `keys=`, and `formats=`.
+## 2. Sections & Variables
 
-### A. Declaration Rules (`var=`, `keys=`, `formats=`)
+Document content template with structured data.
 
-* **`var=` (Objects & Arrays):** Declares every object and array referenced by the section body.
-* **Objects:** Declare using the object name (e.g., `basic`).
-* **Arrays (Loop Sources):** MUST be prefixed with `[]` (e.g., `[]founders`).
-* *Example:* `var=basic, []founders`
+```
+[section 0]
+name=userinfo
+var=info, []entries
+keys=username, date_field, time_field
+formats=[date_field:dd-MM-yyyy], [time_field:HH\:m]
 
-* **`keys=` (Flat Fields & Format Targets):**
-  * Declares flat fields that are not members of any declared object or array (e.g., `letter_number`, `date`).
-  * **CONDITIONAL DOT-NOTATION RULE:** Object or array fields (e.g., `founders.birthdate`) MUST NOT appear in `keys=` unless they are explicitly referenced by `formats=`.
+--- BODY ---
+<w:c|b>Center Bold</w:c|b>
+<p>your username is <b>{{info.username}}</b> created on <i>{{info.date_field}}</i> at <u>{{info.time_field}}</u></p>
+<loop x from entries>
+   {{x.name}} lives at {{x.address}}
+</loop>
 
-* **`formats=` (Data Formatting):**
-  * **Syntax:** `[key:format]` or `[source.field:format]`.
-  * Supports `dd`, `MM`, `yyyy`, `HH`, `mm`, `ss`, and numeric formatting (e.g., `[price:#,##0]`).
-  * Supports regex patterns like `\d`, `\w`, or other regex (e.g., `[code:\d{4}]`).
-  * **Escape colon:** a literal colon inside the format MUST be escaped as `\:` (e.g., `[time_field:HH\:m]`).
-  * **EXCLUSIVE REGISTRATION RULE:** Every key or dotted path referenced by `formats=` MUST also appear in `keys=`.
-  * *Example:* To format `founders.birthdate`, declare:
+[section 1]
+name=address
+var=addr
+keys=street, city, zip
 
-    ```ini
-    var=[]founders, basic
-    keys=founders.birthdate, basic.time
-    formats=[founders.birthdate:dd-MM-yyyy, basic.time:HH\:m]
-    ```
+--- BODY ---
+<p>{{addr.street}}, {{addr.city}} - {{addr.zip}}</p>
 
-* **Strict Section Attributes Rule:** The ONLY valid attributes inside `[section N]` are `name=`, `var=`, `keys=`, and `formats=`. Do NOT invent additional attributes such as `keys-unpredictable=` or `var-unpredictable=`. Unpredictable declarations MUST use the dedicated `[object-unpredictable]` and `[keys-unpredictable]` blocks.
+[section 2]
+name=simple
+keys=title, message
 
-### B. Section Limits & Splitting
+--- BODY ---
+<p>{{title}}: {{message}}</p>
+```
 
-* **Context Rule:** A section MUST represent only one document context. Different document contexts MUST always be placed in different sections.
+### Section Properties
 
-* **Splitting Rule:** After grouping declarations by document context, if adding another declaration would exceed the maximum allowed `var` or `keys` entries, you MUST create a new sequential `[section N]` for the same context. A section MUST NOT merge declarations from different contexts to avoid exceeding these limits.
+| Property   | Description                            |
+|------------|----------------------------------------|
+| `name`       | Section identifier — **REQUIRED** in every `[section N]`. Must be declared before `var=` and `keys=`. |
+| `var`        | Comma-separated variable names. **Objects:** plain name (e.g. `info`). **Arrays (loop sources):** prefix with `[]` (e.g. `[]entries`). Pattern: `var=info, []entries` — **first** `info` is prefix for `{{info.key}}` via `keys`. **Subsequent** `[]entries` is a data source for `<loop x from entries>`. |
+| `keys`       | Comma-separated field names for data variable resolution. For primary var: field names. For array fields requiring formatting: `source.field` (e.g. `items.date_field`). **CONDITIONAL DOT-NOTATION RULE:** Dotted paths (object/array fields) MUST NOT be registered in `keys=` UNLESS they are explicitly formatted in `formats=`. Optional — sections without `var`/`keys` pass `{{...}}` through as literals. |
+| `formats`    | Per-key format: `[key:format]` or `[source.field:format]`. Defines the output format of a key. **EXCLUSIVE REGISTRATION RULE:** Any key or dotted path targeted in `formats=` MUST be explicitly listed in `keys=`. For array fields in loops, use `[source.field:format]` (e.g. `[items.date_field:dd-MM-yyyy`). |
 
-* **PAGE BREAK WARNING:** DO NOT use `[section:next-page N]` merely to split declarations. `[section:next-page N]` represents an explicit page break in the source document. Use standard `[section N]` for logical document grouping. Use `[section:next-page N]` ONLY when the source document explicitly contains a page break.
+> Properties use `=` separator (e.g. `name=example`).
 
-#### Section Break Syntax (`[section:next-page N]`)
+### Var Usage
 
-`[section:next-page N]` combines a section break with an explicit page break. Emit it ONLY when the source document explicitly contains a page break.
+- **Section Limits:** Aim for ≤ 5 `var` entries and ≤ 15 `keys` entries per section.
+- **Splitting Rule:** If you exceed these limits, split into a new logical section (e.g. `[section 1]`, `[section 2]`).
+
+```
+var=info, []entries
+```
+
+| Position | Name         | Source of data           | Access in body                                |
+|----------|--------------|--------------------------|-----------------------------------------------|
+| 1st      | `info`       | Resolved via `keys`      | `{{info.username}}`                           |
+| 2nd+     | `[]entries`  | Array data source        | `<loop x from entries>{{x.name}}</loop>`      |
+
+- **First name** (`info`): variable prefix. Fields listed in `keys`. Accessed as `{{info.key}}`.
+- **Additional names** (`[]entries`, ...): data sources for loops. Accessed via `<loop x from entries>`, then `{{x.field}}` per item.
+
+### Variables
+
+`{{var.key}}` — e.g. `{{info.username}}`, `{{info.date_field}}`.
+
+Built-in variables (resolved automatically, no registration needed):
+- `{{date}}` — current compilation date
+- `{{title}}` — document title (from `[title]` section)
+- `{{page}}` — page number (works in header/footer; passed as literal in body)
+- `{{total}}` — total pages (works in header/footer; passed as literal in body)
+
+### Format Specifiers
+
+Format is defined as `[key:format]` in the `formats` property.
+
+| Specifier | Description     |
+|-----------|-----------------|
+| `dd`      | Day (01–31)     |
+| `MM`      | Month (01–12)   |
+| `yyyy`    | Year (4 digit)  |
+| `HH`      | Hour (00–23)    |
+| `mm`      | Minute (00–59)  |
+| `ss`      | Second (00–59)  |
+
+Example: `[date_field:yyyy-MM-dd]` → `2026-06-24`
+
+Besides the specifiers above, format also supports regex patterns like `\d`, `\w`, or other regex.
+
+### Format for Array Fields
+
+For fields inside array objects (used in `<loop x from source>`) that need formatting, use **dotted path** in both `keys` and `formats`. Fields that do NOT need formatting must NOT appear in `keys=`:
 
 ```ini
 [section 0]
-name=cover
-var=info
-keys=title, author
+var=info, []items
+keys=title, items.date_field
+formats=[items.date_field:dd-MM-yyyy]
 
 --- BODY ---
 <h1>{{info.title}}</h1>
-<p>{{info.author}}</p>
-
-[section:next-page 1]
-
---- BODY ---
-<p>new section after page break</p>
+<loop x from items>
+  <p>{{x.name}} — {{x.date_field}}</p>   ← formatted via dotted path match
+</loop>
 ```
 
-* `N` = section sequence number (continues the numbering of the previous sections).
-* The block may also declare `name=`, `var=`, `keys=`, and `formats=` when the new section introduces document context that requires variables. All section rules from this section still apply.
+After loop expansion, `{{x.date_field}}` becomes `{{items.0.date_field}}` — the format engine matches it against `items.date_field` by stripping the array index.
 
-### C. Key Rules & Behavior
+### Variable Registration Rule
 
-* **Variable Resolution:** Every template reference (`{{object.field}}`) MUST resolve to a declared object in `var=`. Every standalone template reference (`{{key}}`) MUST resolve to a declaration in `keys=`.
+`{{...}}` variables that reference data fields must be registered in:
+- **`keys`** — field names or dotted paths
+- **`var`** — data source names
 
-* **Built-in Variables:** `{{page}}`, `{{total}}`, `{{title}}`, and `{{date}}` are built-in variables and MUST NOT be declared.
+**Strict Usage:** Every variable in `var=` and every key in `keys=` MUST be used at least once in `--- BODY ---`. Do NOT declare unused variables or keys.
 
-* **Loop Variables:** Inside a loop, fields MUST be accessed through the loop alias (e.g., `{{x.name}}`). Any formatted array field MUST use its schema path in `formats=` (e.g., `entries.date_field`).
+Sections without `var` or `keys` are allowed: unresolvable `{{...}}` variables pass through as **literal strings** (e.g. `{{unknown}}` appears as-is). Built-in variables (`{{date}}`, `{{title}}`, `{{page}}`, `{{total}}`) are resolved automatically regardless of registration.
 
-* **Strict Usage:** Every declaration in `var=` and `keys=` MUST be referenced at least once in `--- BODY ---`. Do NOT declare unused objects, arrays, or keys.
+### Block Tags (outside `<p>`)
 
-### ✅ CORRECT USAGE EXAMPLES
+> **TAG BALANCING:** Every opened tag must be closed exactly. `<loop:ol>` MUST close with `</loop:ol>`, NOT `</loop>`.
+>
+> **NO `<w:*>` NESTING:** `<w:*>` tags MUST NOT contain other `<w:*>` tags. `<w:c><w:b>text</w:b></w:c>` is an error. Use OR logic in a single tag: `<w:c|b>text</w:c|b>`.
+>
+> **TAB INSIDE `<w:*>`:** `<tab>`, `<tab/>`, and `<tab size=N>` ARE allowed inside `<w:*>` tags. `<br>` is also allowed.
+>
+> **NO HEADING NESTING:** Heading tags `<h1>`–`<h9>` MUST NOT appear inside `<p>`, `<w:*>`, or other heading tags. `<p><h2>text</h2></p>` and `<h1><h2>text</h2></h1>` are errors.
 
-```ini
-[section 0]
-name=header_info
-var=company
+| Tag                              | Description                     |
+|----------------------------------|---------------------------------|
+| `<w:c>...</w:c>`                 | Center                          |
+| `<w:b>...</w:b>`                 | Bold                            |
+| `<w:i>...</w:i>`                 | Italic                          |
+| `<w:u>...</w:u>`                 | Underline                       |
+| `<w:s>...</w:s>`                 | Strikethrough                   |
+| `<w:c\|b>...</w:c\|b>`           | Center + Bold                   |
+| `<w:b\|i>...</w:b\|i>`           | Bold + Italic                   |
+| `<w:b\|i\|u>...</w:b\|i\|u>`     | Bold + Italic + Underline       |
+| `<w:c\|s>...</w:c\|s>`           | Center + Strikethrough           |
+| `<p>`                            | Paragraph                       |
+| `<br>`                           | Line break                      |
+| `<tab>`                          | Tab character (inside `<p>`)    |
+| `<tab size=N>`                   | Tab with N spaces               |
+| `<loop x from var>...</loop>`     | Iterate array `var`, each item as `x` |
+| `<loop:ol x from var>...</loop:ol>` | Iterate + wrap `<ol>`; each iteration MUST include `<li>...</li>` or `<p>...</p>` |
+| `<loop:ul x from var>...</loop:ul>` | Iterate + wrap `<ul>`; each iteration MUST include `<li>...</li>` or `<p>...</p>` |
 
---- BODY ---
-<h1>COMPANY PROFILE</h1>
-<p>{{company.name}} - {{company.sector}}</p>
+> Note: `\|` inside table cells is markdown escape for `|` — the actual tag is `<w:b|i>` etc.
 
-[section 1] # Standard split (NOT next-page)
-name=seller_info
-var=seller
-keys=seller.birthdate
-formats=[seller.birthdate:dd-MM-yyyy]
+### Paragraph Properties
 
---- BODY ---
-<p>Seller: {{seller.name}} (DOB: {{seller.birthdate}})</p>
+`<p>` and `<h1>`–`<h9>` tags accept paragraph-level formatting attributes (`<li>` does NOT accept attributes — set properties on inner `<p>` tags instead):
 
-
-```
-
-### D. Additional Hard Limits (ZERO TOLERANCE)
-
-The following rules are absolute. Violation of any rule produces an invalid DCD document.
-
-* **Duplicate Attributes:** Each attribute MAY appear only once within a tag (e.g., `<p hanging=0.3 hanging=0.3>` is INVALID).
-
-* **Section Limits:** A section MUST NOT exceed the maximum allowed `var` or `keys` entries defined by this specification.
-
-* **No Invented Objects:** Object names MUST originate from the input data. Flat fields MUST remain flat unless the input explicitly defines an object. NEVER introduce object wrappers or prefixes that do not exist in the source.
-
-* **Array Handling:** Arrays MUST be declared using the `[]` prefix in `var=` (e.g., `var=[]entries`) and MUST be iterated using the appropriate `<loop>` variant. Array fields MUST NOT be referenced outside their corresponding loop.
-
-* **Dotted Keys:** A dotted key (e.g., `founders.birthdate`) is valid in `keys=` ONLY when the identical dotted path is referenced by `formats=`.
-
-### E. Validation Checklist (MANDATORY)
-
-Every `[section N]` MUST satisfy all of the following conditions before output.
-
-- [ ] The section represents exactly one document context.
-- [ ] The section does not exceed the maximum allowed `var` entries.
-- [ ] The section does not exceed the maximum allowed `keys` entries.
-- [ ] Every declared `var=` is referenced at least once in `--- BODY ---`.
-- [ ] Every declared `keys=` is referenced at least once in `--- BODY ---`.
-- [ ] Every dotted key in `keys=` has a matching `formats=` declaration.
-- [ ] Attributes appear in the required order: `name=` → `var=` → `keys=` → `formats=`.
-- [ ] No attributes other than `name=`, `var=`, `keys=`, and `formats=` appear inside `[section N]`.
-- [ ] Every object name originates from the input data.
-- [ ] Arrays are declared using the `[]` prefix and referenced only through `<loop>` constructs.
-- [ ] No direct `{{array.field}}` reference exists outside its corresponding loop.
-- [ ] Every `{{object.field}}` reference resolves to a declared object or `[object-unpredictable]`.
-- [ ] Paragraphs remain paragraphs and lists remain lists unless the source document explicitly defines otherwise.
-
-## 5. BODY TAGS & NESTING LOGIC
-
-The `--- BODY ---` section MUST follow the structural rules defined below. Paragraph tags MUST be selected solely according to the formatting requirements of the source content.
-
-### A. Paragraph Types
-
-#### 1. Wrapper Paragraphs (`<w:*>`)
-
-A paragraph MUST use `<w:*>` when the ENTIRE paragraph shares a single, uniform formatting definition. Every character in the paragraph has the same alignment, bold/italic/underline state, font size, and color.
-
-Content inside `<w:*>` MUST be plain text and `{{...}}` variables ONLY.
-
-Absolutely NO DCD tags are allowed inside `<w:*>`, including but not limited to:
-`<b>`, `<i>`, `<u>`, `<s>`, `<p>`, `<w:*>`, `<set:...>`, `<code>`, `<sub>`,
-`<sup>`, `<mark>`, `<h1>`–`<h9>`, `<ul>`, `<ol>`, `<li>`,
-`<pb>`, `<loop>`, `<loop:ul>`, `<loop:ol>`.
-
-**TAB & BR INSIDE `<w:*>`:** `<tab>`, `<tab/>`, `<tab size=N>`, and `<br>` ARE allowed inside `<w:*>` tags.
-
-Even if the wrapper already declares the same formatting flag, the inner tag is STILL forbidden.
-
-* **Syntax:** `<w:align|styles attributes>`
-
-* **Valid Alignment Values:**
-  * `l` — left (default)
-  * `c` — center
-  * `r` — right
-  * `j` — justify
-
-* **Valid Style Flags:**
-  * `b` — bold
-  * `i` — italic
-  * `u` — underline
-  * `s` — strikethrough
-
-  Multiple flags MUST be separated using `|`.
-
-* **Supported Attributes:**
-  * `size` or `font-size`
-  * `color`
-  * `indent`
-  * `hanging`
-
-  Indentation values MUST use the document unit defined by `[style]`.
-
-* **Underline Attribute**
-
-  `<w:u>` MAY specify:
-
-  ```text
-  underline=single
-  underline=double
-  underline=dotted
-  underline=dash
-  underline=wavy
-  ```
-
-##### Anti-Pattern: Nested Tags Inside `<w:*>` (FORBIDDEN)
-
-ALL nested tags inside `<w:*>` are forbidden, even if they match a flag already declared by the wrapper.
-
-```text
-INVALID:
-<w:c|b><b>text</b></w:c|b>              # <b> redundant with flag b — STILL FORBIDDEN
-<w:l|i><i>text</i></w:l|i>              # <i> redundant with flag i — STILL FORBIDDEN
-<w:j><set:b|u>text</set:b|u></w:j>      # <set:...> forbidden
-<w:c><p>text</p></w:c>                  # <p> forbidden
-<w:r><code>text</code></w:r>            # <code> forbidden
-```
-
-**Correct representations:**
-- If the ENTIRE paragraph is uniformly bold and centered → `<w:c|b>text</w:c|b>` (plain text only, no `<b>`)
-- If only PART of the paragraph is bold → use `<p>` with inline `<b>` tags:
-
-```text
-<p align=center><b>Bold part</b> normal part</p>
-```
-
-**Decision rule:**
-- Uniform formatting across all content → `<w:*>` with plain text only
-- Varying formatting within the paragraph → `<p>` with inline tags (`<b>`, `<i>`, `<set:...>`, etc.)
-
-#### 2. Rich Paragraphs (`<p>`)
-
-A paragraph MUST use `<p>` whenever inline formatting varies within the paragraph.
-
-Nested inline tags are permitted.
-
-Supported attributes:
-
-* `align=left|center|right|justify`
-* `size`
-* `color`
-* `indent`
-* `hanging`
-* `tab-stops` (see Section 5.B.5)
-
-Indentation values MUST use the document unit defined by `[style]`.
-
-#### 3. Paragraph Properties
-
-`<p>` and `<h1>`–`<h9>` accept the following paragraph-level attributes. `<li>` does NOT accept attributes — set them on the inner `<p>`.
+> **KEBAB-CASE MANDATORY:** All attribute names are lowercase kebab-case — `indent-left`, `indent-hanging`, `line-spacing`, `line-rule`, `space-before`, `first-line`. camelCase forms (`indentLeft`, `indentHanging`, `lineSpacing`, `lineRule`) and any other casing are INVALID and silently ignored. Write exactly the kebab-case form documented below.
 
 > **QUOTED VALUES:** Any attribute value may be wrapped in double quotes — this is REQUIRED when the value contains spaces (e.g. `style="Body Text Indent 3"`). Quoted values are stripped of their surrounding quotes; bare values must not contain spaces. Unquoted single-word values are unchanged and remain the common form.
 
-##### Indent
+#### Indent
 
-| Property       | Example            | Description                                      |
-|----------------|--------------------|--------------------------------------------------|
-| `indent`       | `indent=0.5`       | Left indent (in document unit)                   |
-| `indent-right` | `indent-right=0.5` | Right indent (in document unit)                  |
-| `hanging`      | `hanging=0.25`     | Hanging indent (removed from first line)         |
-| `first-line`   | `first-line=0.5`   | Extra indent for first line only                 |
+| Property         | Example                  | Description                                      |
+|------------------|--------------------------|--------------------------------------------------|
+| `indent-left`    | `indent-left=0.5`        | Left indent (in document unit)                   |
+| `indent-right`   | `indent-right=0.5`       | Right indent (in document unit)                  |
+| `indent-hanging` | `indent-hanging=0.25`    | Hanging indent (removed from first line)         |
+| `first-line`     | `first-line=0.5`         | Extra indent for first line only                 |
 
-`hanging` and `first-line` are mutually exclusive — if both are set, `first-line` takes precedence.
+`indent-hanging` and `first-line` are mutually exclusive — if both are set, `first-line` takes precedence.
 
-##### Spacing
+#### Spacing
 
 | Property       | Example              | Description                                          |
 |----------------|----------------------|------------------------------------------------------|
-| `space-before` | `space-before=12pt`  | Space before paragraph (layout unit)                 |
-| `space-after`  | `space-after=6pt`    | Space after paragraph (layout unit)                  |
-| `line-height`  | `line-height=1.5`    | Line spacing: multiplier (bare number) or exact value with unit suffix (`12pt`, `0.17in`, `6mm`) |
-| `line-rule`    | `line-rule=exact`    | Line spacing rule: `auto` (default), `exact`, `atLeast`. Only applied when `line-height` is also set. |
+| `space-before` | `space-before=12pt`  | Space before paragraph (layout unit)                   |
+| `space-after`  | `space-after=6pt`    | Space after paragraph (layout unit)                    |
+| `line-spacing` | `line-spacing=1.5`   | Line spacing: multiplier (bare number without `line-rule`) or absolute length with `line-rule=exact`/`atLeast` (`12pt`, `0.17in`, `6mm`) |
+| `line-rule`    | `line-rule=exact`    | Line spacing rule: `auto` (default), `exact`, `atLeast`. Only applied when `line-spacing` is also set. |
 
-`line-height` accepts two forms:
+**Line Spacing:**
 
-1. **Multiplier** — bare number (no unit suffix): `1.5`, `2.0`, `1.2`
-   - `line-height=1.5` → 1.5× normal line spacing
-   - `line-rule` defaults to `auto`
+`line-spacing` follows docx semantics:
 
-2. **Exact** — value with unit suffix: `12pt`, `0.17in`, `6mm`, `1cm`
-   - `line-height=12pt` → exactly 12pt line height
-   - Use with `line-rule=exact` or `line-rule=atLeast`
+1. **Multiplier** — bare number (no unit suffix), no `line-rule`: `1.5`, `2.0`, `1.2`
+   - `line-spacing=1.5` → 1.5× normal line spacing (`lineRule=auto`)
 
-```text
-<p line-height=1.5>1.5× normal spacing</p>
-<p line-height=12pt line-rule=exact>exactly 12pt line height</p>
-<p line-height=0.17in line-rule=exact>exactly 0.17 inch</p>
-<p line-height=6mm line-rule=atLeast>minimum 6mm line height</p>
+2. **Exact / At-least** — absolute length with `line-rule=exact` or `line-rule=atLeast`: `12pt`, `0.17in`, `6mm`, `1cm`
+   - `line-spacing=12pt line-rule=exact` → exactly 12pt line height
+   - A bare number with `line-rule=exact`/`atLeast` is also an absolute length in the document unit
+
+```
+<p line-spacing=1.5>1.5× normal spacing</p>
+<p line-spacing=12pt line-rule=exact>exactly 12pt line height</p>
+<p line-spacing=0.17in line-rule=exact>exactly 0.17 inch</p>
+<p line-spacing=6mm line-rule=atLeast>minimum 6mm line height</p>
 ```
 
-##### Borders
+#### Borders
 
 | Property         | Example                 | Description                                                                  |
 |------------------|-------------------------|------------------------------------------------------------------------------|
@@ -469,7 +339,7 @@ Indentation values MUST use the document unit defined by `[style]`.
 
 Border color uses `border-color` (default `auto`).
 
-##### Pagination & Flow
+#### Pagination & Flow
 
 | Property        | Example                   | Description                                |
 |-----------------|---------------------------|--------------------------------------------|
@@ -479,269 +349,529 @@ Border color uses `border-color` (default `auto`).
 | `widow-control` | `widow-control=false`     | Widow/orphan control (`true` / `false`)    |
 | `contextual-spacing`| `contextual-spacing=true` | Remove space between same-style paragraphs |
 
-##### Appearance
+#### Appearance
 
 | Property       | Example                  | Description                                        |
 |----------------|--------------------------|----------------------------------------------------|
 | `shading`      | `shading=#f0f0f0`        | Paragraph background color                         |
 | `outline-level`| `outline-level=1`        | Outline level 0–8 (used for TOC)                   |
-| `dir`          | `dir=rtl` / `dir=ltr`    | Text direction                                     |
+| `dir`          | `dir=rtl` / `dir=ltr`    | Text direction                                    |
 | `valign`       | `valign=center`          | Vertical alignment within line: `auto`, `top`, `center`, `baseline`, `bottom` |
 
-##### words-XML → DCD attribute mapping (MANDATORY)
+#### Tab Stops
 
-| words-XML attr | DCD attr | Notes |
-|----------------|----------|-------|
-| `align`        | `align`  | `both` MUST become `justify` (DCD has no `both`) |
-| `indentLeft`   | `indent` | |
-| `indentRight`  | `indent-right` | |
-| `indentFirst`  | `first-line` | |
-| `indentHanging`| `hanging` | |
-| `spacingBefore`| `space-before` | |
-| `spacingAfter` | `space-after` | |
-| `lineSpacing`  | `line-height` | `lineRule="auto"` → bare multiplier; `lineRule="exact"`/`atLeast` → value is a physical length in the declared unit and MUST get a unit suffix (bare would be misread as multiplier) |
-| `lineRule`     | `line-rule` | |
-| `shd`          | `shading` | |
-| `keepNext`     | `keep-next` | |
-| `keepLines`    | `keep-lines` | |
-| `widowControl` | `widow-control` | |
-| `sectionBreak` | `section-break` | `nextPage` → `true` |
+| Property | Example                                      | Description                             |
+|----------|----------------------------------------------|-----------------------------------------|
+| `tabs`   | `tabs="0.32 0.63 0.95 1.26"`                 | Space-separated tab stop positions      |
+| `tabs`   | `tabs="6.10@right:hyphen"`                   | Tab stop with alignment and leader      |
 
-`tabs` (words-XML per-paragraph effective stops) MAY be skipped — the DCD `tab-stops` format differs and is optional.
+Applies to `<p>` and `<h1>`–`<h9>`. Tab stop format:
+- **position**: length in the document unit (1 inch = 1440 twips); a unit suffix (`in`, `cm`, `mm`, `pt`, `pica`) is allowed
+- **`@alignment`** (optional): `L` left, `C` center, `R` right, `D` decimal
+- **`:leader`** (optional): `none`, `dot`, `hyphen`, `underscore`, `middleDot`
 
----
+Plain positions default to `L` / `none`. Positions with and without `@align:leader` can be mixed:
 
-### B. Allowed Inline Tags
+```
+<p tabs="0.32 0.63 0.95 1.26">quarter-inch tabs</p>
 
-The following inline tags are valid ONLY inside `<p>` and `<li>`.
+<p tabs="6.10@right:hyphen">right-aligned with hyphen leader</p>
 
-#### 1. Single Formatting Tags
-
-Use these tags ONLY when exactly ONE formatting style is applied to the enclosed text.
-
-* `<b>`
-* `<i>`
-* `<u>`
-* `<s>`
-* `<code>`
-* `<sub>`
-* `<sup>`
-* `<mark>`
-* `<tab>`
-
-Rules:
-
-* `<code>` renders monospace text.
-* `<mark>` defaults to yellow unless `color=` is specified.
-* `<tab>` MAY specify an optional `size=` attribute.
-
-If more than one formatting style applies to the same text, these tags MUST NOT be nested. Use `<set:...>` instead.
-
-
-#### 2. Combined Formatting (`<set:...>`) — CANONICAL SYNTAX
-
-`<set:...>` is the REQUIRED representation whenever two or more formatting styles apply to the same text.
-
-Formatting flags are combined using the `|` character.
-
-Supported flags:
-
-* `b`
-* `i`
-* `u`
-* `s`
-* `code`
-
-Examples:
-
-```text
-<set:b|i>Bold Italic</set:b|i>
-
-<set:b|i|u>Bold Italic Underline</set:b|i|u>
-
-<set:s|b>Bold Strikethrough</set:s|b>
-
-<set:code|b>Monospace Bold</set:code|b>
+<p tabs="0.5 1in@right:dot 2.5cm@center:hyphen">mixed formats</p>
 ```
 
-Underline variants MAY be specified only when the `u` flag is present.
+```
+<p indent-left=1 indent-hanging=0.5>
+  First line starts 0.5 from left margin,
+  rest of paragraph indented 1 from margin.
+</p>
 
-Examples:
+<li>
+  <p indent-left=0.5 indent-hanging=0.25>list item with custom indent</p>
+</li>
 
-```text
-<set:u underline=double>Double Underline</set:u>
+<p space-before=12pt space-after=6pt line-spacing=1.5>spaced paragraph</p>
 
-<set:b|u underline=wavy>Important</set:b|u>
+<p border=1pt border-color=#2b5797>framed paragraph</p>
+
+<li>
+  <p shading=#ffffcc>shaded list item</p>
+</li>
+
+<p section-break=true>starts on new section</p>
+
+<p tabs="0.5 2@right:dot">content	right-aligned with dot leader</p>
 ```
 
-#### 3. Forbidden Representations
+**Precedence (high → low):**
+1. Inline attribute on tag
+2. `[style:paragraph <name>]` applied via `style=`
+3. `[style:heading-N]` heading style (headings only)
+4. `[style]` global default
 
-The following representations are INVALID because `<set:...>` is the canonical syntax for combined formatting.
+### Named Paragraph Styles
 
-```text
-<b><i>Bold Italic</i></b>
+Define reusable paragraph styles with `[style:paragraph <name>]` and apply them via `style=<name>` on `<p>` and `<h1>`–`<h9>`.
 
-<b><u><i>Text</i></u></b>
+```
+[style:paragraph quote]
+font-size=14pt
+color=#666666
+indent-left=1
+border=1pt
 
-<code><b>Example</b></code>
-
-<i><s>Italic Strike</s></i>
+[style:paragraph code-block]
+font-family="Consolas"
+font-size=10pt
+line-spacing=1.2
+space-before=6pt
+space-after=6pt
 ```
 
-Equivalent valid representations:
+Usage:
 
-```text
-<set:b|i>Bold Italic</set:b|i>
-
-<set:b|i|u>Text</set:b|i|u>
-
-<set:code|b>Example</set:code|b>
-
-<set:i|s>Italic Strike</set:i|s>
+```
+<p style=quote>This is a quoted paragraph.</p>
+<p style=code-block>func main() { fmt.Println("hi") }</p>
 ```
 
-#### 4. Tab
+**Rules:**
+1. Section name format: `[style:paragraph <name>]`
+2. Supports all [Paragraph Properties](#paragraph-properties)
+3. Apply via `style=<name>` on `<p>` or `<h1>`–`<h9>`
+4. Inline attributes on the tag override the named style
+5. Named style overrides the global `[style]` default
+6. Style names may contain spaces. When applying, wrap the name in double quotes: `<p style="Body Text Indent 2">`. In the section definition the name may be bare (`[style:paragraph Body Text Indent 3]`) or, for multi-word names, wrapped in quotes (`[style:paragraph "Body Text Indent 3"]`) — both register the same `Body Text Indent 3`.
 
-`<tab>` inserts a tab character.
+**In lists:**
 
-Optional:
+```
+[style:paragraph highlight]
+shading=#ffffcc
+indent-left=0.5
 
-```text
-<tab size=4>
+<ul>
+<li>
+<p style=highlight>Highlighted list item</p>
+</li>
+</ul>
 ```
 
-Only the `size` attribute is permitted.
+### Inline Tags (inside `<p>`, `<li>`, `<col>`)
 
-#### 5. Tab Stops
+| Tag              | Description             |
+|------------------|-------------------------|
+| `<b>...</b>`     | Bold                    |
+| `<i>...</i>`     | Italic                  |
+| `<u>...</u>`     | Underline               |
+| `<s>...</s>`     | Strikethrough           |
+| `<code>...</code>`| Monospace / code font  |
+| `<mark>...</mark>`| Highlight (default yellow, optional: `<mark color=green>`) |
+| `<sub>...</sub>`  | Subscript               |
+| `<sup>...</sup>`  | Superscript             |
+| `<span attrs>...</span>` | Run formatting (color, bg, font-size, etc.) |
+| `<set:flags>...</set:flags>` | Combined formatting |
 
-`tab-stops` is a paragraph-level attribute that defines tab stop positions. It applies to `<p>` and `<h1>`–`<h9>` (NOT `<w:*>` or `<li>`).
+**`<span>` run formatting:** Apply run-level attributes via `<span attrs>`. Only attributes with **no dedicated inline tag** belong here — `bold`/`italic`/`strike`/`underline` use `<b>`/`<i>`/`<s>`/`<u=style>` instead. Nested `<span>` inside `<span>` is NOT allowed (parse error); it composes with the other inline tags.
 
-```text
-<p tab-stops=720:L:none,1440:C:dot>content</p>
+| Attribute      | Example                      | Description                          |
+|----------------|------------------------------|--------------------------------------|
+| `color`        | `color=#FF0000`              | Text color (hex or name)             |
+| `bg`           | `bg=#ffffcc`                 | Background shading                   |
+| `font-size`    | `font-size=18pt`             | Font size                            |
+| `font-family`  | `font-family="Courier New"`  | Font family                          |
+| `caps`         | `caps=true`                  | All caps                             |
+| `small-caps`   | `small-caps=true`            | Small caps                           |
+| `letter-spacing` | `letter-spacing=1pt`       | Letter spacing                       |
+
+```
+<p><span color=#FF0000>red text</span> and <span bg=#ffffcc>highlighted</span></p>
+<p><span font-family="Courier New" font-size=10pt>small monospace</span></p>
+<p><span color=#0000FF>blue <b>and bold</b> rest</span></p>
 ```
 
-Tab stop format: `<position>:<alignment>:<leader>`:
+Combined formatting with `<set:>`:
 
-* **position:** integer in twips OR value with unit suffix
-* **alignment:** `L` left, `C` center, `R` right, `D` decimal
-* **leader:** `none`, `dot`, `hyphen`, `underscore`, `middleDot`
-
-**Position Formats:**
-
-1. **Twips (backward compatible)** — bare integer: `720`, `1440`, `2880`
-   * 1 inch = 1440 twips
-   * No unit suffix required
-2. **With unit suffix** — `0.5in`, `2cm`, `25mm`
-   * Supported units: `in`, `inch`, `cm`, `mm`, `pt`, `pica`
-   * Automatically converted to twips
-
-```text
-<p tab-stops=720:L:none,2880:R:dot>twips format</p>
-
-<p tab-stops=0.5in:L:none,2in:R:hyphen>inch format</p>
-
-<p tab-stops=2cm:L:dot,5cm:R:underscore>cm format</p>
-
-<p tab-stops=720:L:none,1in:R:dot,2.5cm:C:hyphen>mixed formats</p>
+```
+<p><set:b|i>Bold and Italic</set:b|i></p>
+<p><set:b|u>Bold and Underline</set:b|u></p>
+<p><set:i|code>Italic monospace</set:i|code></p>
+<p><set:b|i|u>Bold, Italic, and Underline</set:b|i|u></p>
+<p><set:s|b>Strikethrough and Bold</set:s|b></p>
 ```
 
----
+**Available flags:** `b` (bold), `i` (italic), `u` (underline), `s` (strikethrough), `code` (monospace)
 
-### C. Standalone Elements
+**Closing tag:** Must match opening flags: `<set:u>text</set:u>`, `<set:b|i>text</set:b|i>`
 
-The following elements MUST appear as standalone document elements.
+**Attributes:** Pass additional formatting via attributes on `<set:flags>`:
 
-* `<pb>`
-* `<page-break>`
-* `<hr>`
+```
+<p><set:u underline=double>double underline</set:u></p>
+<p><set:b|u underline=dash>bold with dashed underline</set:b|u></p>
+```
 
-They MUST NOT appear inside:
+| Attribute    | Values                    | Description        |
+|--------------|---------------------------|--------------------|
+| `underline`  | `single`, `double`, `dotted`, `dash`, `wavy` | Underline style |
 
-* `<w:*>` — EXCEPT `<br>`, which IS allowed inside `<w:*>` (see Section 5.A.1)
-* `<p>`
-* `<li>`
-* headings
+### Block Tags with Attributes
 
-If a page break or divider occurs between two paragraphs, the paragraphs MUST be emitted as separate elements.
+Block `<w:>` tags also accept attributes for additional formatting:
 
----
+```
+<w:u underline=double>double underline paragraph</w:u>
+<w:u underline=dash>dashed underline paragraph</w:u>
+```
 
-### D. Paragraph and List Preservation
+| Tag                     | Attribute               | Values                    | Description        |
+|-------------------------|-------------------------|---------------------------|--------------------|
+| `<w:u>`                 | `underline`             | `single`, `double`, `dotted`, `dash`, `wavy` | Underline style |
 
-The compiler MUST preserve the structural semantics of the source document.
+### Tab Inside W Block Tags
 
-* Source paragraphs MUST remain paragraphs.
-* Source lists MUST remain lists.
-* A paragraph MUST NOT be converted into a list solely because its text begins with prefixes such as `1.`, `a.`, `-`, or `•`.
-* List output MUST be generated only when the source document explicitly defines list items.
+`<tab>`, `<tab/>`, and `<tab size=N>` are allowed inside `<w:*>` tags:
 
-If the source document contains unsupported features, the compiler MUST preserve the content using the closest DCD construct explicitly defined by this specification. The compiler MUST NOT invent new tags or HTML elements.
+```
+<w:c|b>Name:<tab>John Doe</w:c|b>
+<w:c>City:<tab size=4>Jakarta</w:c>
+<w:b>Phone:<tab/>+62-812-3456-7890</w:b>
+```
 
----
+This enables formatted key-value layouts with tab stops inside centered, bold, or other styled blocks.
 
-## 6. HEADINGS CONFIGURATION & USAGE
+## 3. Headings
 
-Heading styles MAY be configured using `[style:heading-N]`.
+Heading `<h1>`–`<h9>` with global style in `[style:heading-N]`.
 
-`<h1>` through `<h9>` MUST contain ONLY:
+**RESTRICTION:** `<h1>` through `<h9>` MUST contain ONLY plain text and `{{vars}}`. Nested tags (`<b>`, `<i>`, `<u>`, `<code>`, etc.) are STRICTLY FORBIDDEN inside headings.
 
-* plain text
-* template variables (`{{...}}`)
+```
+[style]
+layout=A4
+unit=inch
+m=1
 
-Nested tags are forbidden.
-
-### Configuration Syntax
-
-```ini
 [style:heading-1]
 font-family="Arial"
 font-size=24pt
 color=#2b5797
 bold=true
-space-before=18
-space-after=12
-border-bottom=1pt
-align=center
+space-before=18pt
+space-after=12pt
+border=1pt
+
+[style:heading-2]
+font-family="Arial"
+font-size=18pt
+color=#444444
+bold=true
+space-before=12pt
+space-after=6pt
+
+[style:heading-3]
+font-family="Arial"
+font-size=14pt
+color=#444444
+bold=false
+space-before=6pt
+space-after=3pt
 ```
 
-### Style Precedence
+Body:
 
-Highest precedence first:
+```
+--- BODY ---
+<h1>Chapter 1: Introduction</h1>
+<p>lorem ipsum...</p>
+<h2>1.1 Background</h2>
+<p>lorem ipsum...</p>
+<h3>1.1.1 Sub Section</h3>
+<p>lorem ipsum...</p>
+```
 
-1. Inline attributes
-2. `[style:heading-N]`
-3. `[style]`
+Local override (higher priority):
 
-Only attributes defined by this specification are valid.
+```
+<h1 color=red font-size=28pt>Chapter with local style</h1>
+```
 
-Headings MUST be generated only when the source document explicitly defines a heading. All other textual content MUST use `<p>` or `<w:*>`.
+### Style Properties
 
----
+| Property            | Description                                                                 |
+|---------------------|-----------------------------------------------------------------------------|
+| `font-family`       | Heading font                                                                |
+| `font-size`         | Font size (pt)                                                              |
+| `color`             | Text color                                                                  |
+| `bold`              | `true` / `false`                                                            |
+| `italic`            | `true` / `false`                                                            |
+| `strike`            | `true` / `false`                                                            |
+| `underline`         | `true`, `single`, `double`, `dotted`, `dash`, `wavy`                       |
+| `caps`              | `true` / `false` — all capitals                                            |
+| `small-caps`        | `true` / `false` — small capitals                                          |
+| `letter-spacing`    | Letter spacing (pt)                                                         |
+| `align`             | `left`, `center`, `right`, `justify`                                        |
+| `indent-left`       | Left indent (in document unit)                                             |
+| `indent-right`      | Right indent (in document unit)                                            |
+| `indent-hanging`    | Hanging indent (in document unit)                                          |
+| `first-line`        | First line extra indent (in document unit)                                 |
+| `space-before`      | Space before (layout unit)                                                 |
+| `space-after`       | Space after (layout unit)                                                  |
+| `line-spacing`      | Line spacing: multiplier (bare number without `line-rule`) or absolute length with `line-rule=exact`/`atLeast` |
+| `line-rule`         | Line spacing rule: `auto`, `exact`, `atLeast`                              |
+| `border`           | Border on all sides; `border-bottom`/`border-top`/`border-left`/`border-right` for a single side |
+| `keep-next`         | `true` / `false` — keep with next paragraph                            |
+| `keep-lines`        | `true` / `false` — keep lines together                                 |
+| `section-break`     | `true` — force section break before heading                             |
+| `widow-control`     | `true` / `false` — widow/orphan control                                |
+| `contextual-spacing`| `true` — remove space between same-style paragraphs                    |
+| `shading`           | Background color (hex or named)                                        |
+| `outline-level`     | Outline level 0–8 (for TOC generation)                                 |
+| `dir`               | `ltr` / `rtl`                                                          |
+| `valign`            | Vertical: `auto`, `top`, `center`, `baseline`, `bottom`               |
+| `tabs`              | Space-separated tab stops in document unit; per-stop `@L\|C\|R\|D:leader` optional (`none`, `dot`, `hyphen`, `underscore`, `middleDot`) |
 
-## 7. STATIC LISTS
+### Precedence
 
-Static lists represent hardcoded document content.
+1. Local attribute on tag `<h1 color=red>`
+2. `[style:heading-N]` global
+3. `[style]` font default
 
-Valid tags:
+## 4. Tables
 
-* `<ul>`
-* `<ol>`
-* `<li>`
+### Dynamic Table
 
-`<ol>` supports `type=`:
+```
+<table border=1 width=100%>
+<loop:row x from headers>
+   <col>{{x}}</col>
+</loop:row>
+<loop:row x from entries>
+   <col>{{x.field1}}</col>
+   <col>{{x.field2}}</col>
+</loop:row>
+</table>
+```
 
-* `1`
-* `A`
-* `a`
-* `I`
-* `i`
+### Static Table
 
-`<ol start=N>` — starting number:
+```
+<table border=1>
+  <row bg=#f0f0f0>
+    <col align=center width=30%>Name</col>
+    <col align=center width=30%>City</col>
+    <col align=center width=40%>Age</col>
+  </row>
+  <row>
+    <col align=left>John</col>
+    <col align=left>Jakarta</col>
+    <col align=center>25</col>
+  </row>
+</table>
+```
 
-* `start` — any integer `>= 1` (default `1`). `<ol start=5>` numbers the first item as `5`; with `type=a` the numbering continues from the matching letter (`<ol type=a start=3>` starts at `c`).
-* Only the first level honors `start`; it applies per-`<ol>` block.
+### Tags
 
-`<ul bullet=...>` — bullet glyph (defaults to `circle` when omitted):
+| Tag                              | Description                  |
+|----------------------------------|------------------------------|
+| `<table>...</table>`             | Table wrapper                |
+| `<row>...</row>`                 | Row                          |
+| `<col>...</col>`                 | Cell                         |
+| `<loop:row x from var>...</loop:row>` | Loop data into rows    |
+
+### Table Properties
+
+| Property  | Example   | Description          |
+|-----------|-----------|----------------------|
+| `border`  | `1`       | Enables table grid borders (flag; not a length) |
+| `width`   | `100%`    | Table width¹         |
+
+¹ Not yet implemented (roadmap item).
+
+### Row Properties
+
+| Property  | Example       | Description          |
+|-----------|---------------|----------------------|
+| `bg`      | `#f0f0f0`     | Row background       |
+| `style`   | `header`      | Named table-style    |
+
+### Col Properties
+
+| Property  | Example       | Description          |
+|-----------|---------------|----------------------|
+| `align`   | `center`      | Text alignment       |
+| `width`   | `30%`         | Column width¹        |
+| `bg`      | `#e0e0e0`     | Cell background      |
+| `colspan` | `2`           | Merge columns¹       |
+| `rowspan` | `2`           | Merge rows¹          |
+
+¹ `docx.Cell.ct` is unexported — `GridSpan`/`VMerge`/`CellWidth` cannot be set. Library patch required.
+
+### Named Table Style
+
+```
+[style:table header]
+bg=#2b5797
+color=white
+font-weight=bold
+align=center
+border=1pt
+
+[style:table alt]
+bg=#f5f5f5
+```
+
+Usage:
+
+```
+<table border=1>
+  <row style=header>
+    <col>Name</col>
+    <col>City</col>
+  </row>
+  <row style=alt>
+    <col>John</col>
+    <col>Jakarta</col>
+  </row>
+</table>
+```
+
+### Loop with style.first
+
+Apply style to first row only:
+
+```
+<table border=1>
+  <loop:row x from items style.first=header>
+    <col>{{x.name}}</col>
+    <col>{{x.value}}</col>
+  </loop:row>
+</table>
+```
+
+### Dynamic Row Style
+
+Use variable for style name:
+
+```
+<row style={{myStyle}}>
+  <col>Data</col>
+</row>
+```
+
+## 5. Lists
+
+Standalone lists (not from loop).
+
+```
+<ul>
+  <li>
+    <p>item one</p>
+  </li>
+  <li>
+    <p>item two</p>
+  </li>
+  <li>
+    <p>item three</p>
+  </li>
+</ul>
+
+<ol>
+  <li>
+    <p>first</p>
+  </li>
+  <li>
+    <p>second</p>
+  </li>
+  <li>
+    <p>third</p>
+  </li>
+</ol>
+```
+
+Nested:
+
+```
+<ul>
+  <li>
+    <p>fruit</p>
+    <ul>
+      <li>
+        <p>apple</p>
+      </li>
+      <li>
+        <p>mango</p>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>vegetable</p>
+  </li>
+</ul>
+```
+
+### Tags
+
+| Tag       | Description                                    |
+|-----------|------------------------------------------------|
+| `<ol>`    | Ordered list (supports `type=a/A/1/i/I`, `start=N`) |
+| `<ul>`    | Unordered list (supports `bullet=circle/square/check/dash`) |
+| `<li>`    | List item container — MUST contain `<p>` tags. Does NOT accept attributes. All paragraph properties are set on the inner `<p>` tags. |
+
+### Multi-Paragraph List Items
+
+A `<li>` item MUST contain one or more `<p>...</p>` blocks. The first `<p>` is rendered with the list bullet/number; subsequent `<p>` blocks render as unnumbered continuation paragraphs aligned with the item (using the `ListContinue` style family).
+
+**Container Rule:** `<li>` acts as a container — it MUST contain `<p>` tags. Plain text directly inside `<li>` is NOT allowed.
+
+**Attribute Rule:** `<li>` does NOT accept attributes. All paragraph properties (`indent`, `hanging`, `space-before`, `align`, etc.) MUST be set on the `<p>` tags inside `<li>`.
+
+```
+<ul>
+  <li>
+    <p>Main heading of item</p>
+    <p>Detail paragraph — no bullet/number shown.</p>
+  </li>
+</ul>
+```
+
+```
+<ol>
+  <li>
+    <p>first block para</p>
+    <p>second block para</p>
+  </li>
+</ol>
+```
+
+- `<li>` MUST wrap content in `<p>` tags — no bare text allowed.
+- `<li>` does NOT accept attributes — use `<p>` attributes instead.
+- `<p>` accepts all [Paragraph Properties](#paragraph-properties) attributes (`align`, `indent-left`, `color`, `space-before`, etc.).
+- `<p>` blocks can span multiple lines.
+
+```
+<ul>
+  <li>
+    <p indent-left=0.5 indent-hanging=0.25>Item with custom indent</p>
+    <p space-before=6pt>Continuation paragraph with spacing</p>
+  </li>
+</ul>
+```
+
+Supported `type` values for `<ol>`: `1` (default, numbers), `a` (lowercase letters), `A` (uppercase letters), `i` (lowercase roman), `I` (uppercase roman).
+
+Supported `start` values for `<ol>`: any integer `>= 1` (default `1`). `<ol start=5>` numbers the first item as `5`; with `type=a` the numbering continues from the matching letter (`<ol type=a start=3>` starts at `c`). Only the first level honors `start`; it applies per-`<ol>` block.
+
+### Bullet types
+
+`<ul>` accepts a `bullet=` attribute to choose the bullet glyph (like `<ol type=>`). Defaults to `circle` (the `•` glyph) when `bullet` is omitted.
+
+```
+<ul bullet=circle>
+<ul bullet=square>
+<ul bullet=check>
+<ul bullet=dash>
+```
 
 | Value    | Glyph |
 |----------|-------|
@@ -750,197 +880,272 @@ Valid tags:
 | `check`  | `✓` |
 | `dash`   | `–` |
 
-```text
-<ul bullet=circle>
-<ul bullet=square>
-<ul bullet=check>
-<ul bullet=dash>
+`bullet=` is also accepted on `<loop:ul>` (see [Loop with Unordered List](#loop-with-unordered-list)).
+
+### Horizontal Rule
+
+```
+<hr>
 ```
 
-`bullet=` is also accepted on `<loop:ul>` (see Section 8).
+| Tag       | Description              |
+|-----------|--------------------------|
+| `<hr>`    | Horizontal rule          |
 
-Static lists MAY be nested.
+Properties:
 
-**CRITICAL (container rule):** `<li>` acts as a container — it MUST contain one or more `<p>...</p>` blocks. Plain text directly inside `<li>` is NOT allowed. `<li>` does NOT accept attributes; all paragraph properties MUST be set on the inner `<p>` tags.
+| Property | Example   | Description     |
+|----------|-----------|-----------------|
+| `width`  | `50%`     | Line width      |
+| `color`  | `#cccccc` | Line color      |
+| `thick`  | `2`       | Thickness (pt)¹ |
 
-The first `<p>` renders with the list bullet/number. Subsequent `<p>` blocks render as unnumbered continuation paragraphs aligned with the item.
+¹ Not yet implemented (roadmap item).
 
-```text
-INVALID:
-<li>some text</li>
-<li><b>bold item</b></li>
+## 6. Loops
 
-VALID:
-<li><p>some text</p></li>
-<li><p><b>bold item</b></p></li>
-<li><p>item with {{variable}}</p></li>
+Iterate over array data sources declared in `var`.
+
+The data source name must be listed with `[]` prefix in `var=`. See [Var Usage](#var-usage).
+
+### Critical Loop Constraints
+
+1. **Strict Syntax Order:** The iteration action (`x from source`) MUST come BEFORE any attributes (`type=...`). `<loop:ol x from items type=A>` ✅, `<loop:ol type=A x from items>` ❌.
+2. **Source Matching:** The array source MUST be listed with a `[]` prefix in `var=`.
+3. **Variable Access:** Inside the loop, access fields using the alias (e.g. `{{x.field}}`).
+4. **Closing Tag Rule:** The closing tag MUST EXACTLY MATCH the opening variant prefix, but MUST OMIT the action and attributes. Opening: `<loop:ol x from items type=A>` ➔ Closing: `</loop:ol>` (NOT `</loop>` and NOT `</loop:ol type=A>`).
+5. **List Loop Prohibition:** NEVER wrap a standard `<loop>` inside static `<ol>` or `<ul>` tags. Use the native `<loop:ol>` or `<loop:ul>` tags instead.
+6. **Iteration Item Required:** `<loop:ol>` and `<loop:ul>` MUST wrap each iteration in `<li>...</li>` or `<p>...</p>` inside the loop body. `<p>` is auto-wrapped into `<li>`. Other content is a compile error. `<li>` is a pure container: it MUST contain `<p>` blocks and does NOT accept attributes.
+7. **Silent Index:** Use `{index+N}` (single braces) to insert a 1-based counter. Index starts at 0, so `{index+1}` = 1, 2, 3...
+
 ```
+[section 0]
+name=example
+var=info, []entries
+keys=title
 
-Dynamic arrays MUST use the loop constructs defined in Section 8.
-
----
-
-## 8. DYNAMIC LOOPS (ARRAY ITERATION)
-
-Loop sources MUST originate from array declarations in `var=`.
-
-### A. Syntax
-
-The iteration clause MUST appear before any attributes.
-
-Valid forms:
-
-```text
-<loop x from source>
-...
-</loop>
-
-<loop:ul x from source>
-...
-</loop:ul>
-
-<loop:ol x from source type=A>
-...
-</loop:ol>
-```
-
-The optional `type=` attribute accepts:
-
-* `1`
-* `A`
-* `a`
-* `I`
-* `i`
-
-The optional `indexType=` attribute controls the loop index numbering style:
-
-* `1` — 1, 2, 3 (default, same as omitting indexType)
-* `a` — a, b, c
-* `A` — A, B, C
-* `i` — i, ii, iii
-* `I` — I, II, III
-
-```text
-<loop x from entries indexType=A>
-<p>{{index}}. {{x.name}}</p>
-</loop>
-
-→ outputs: A. ..., B. ..., C. ...
-```
-
-### B. Loop Rules
-
-* The source MUST be declared using the `[]` prefix in `var=`.
-* Fields inside the loop MUST be accessed through the loop alias (e.g., `{{x.name}}`). Any formatted array field MUST use its schema path in `formats=` (e.g., `entries.date_field`).
-* The closing tag MUST exactly match the opening loop variant.
-* Standard `<loop>` MUST NOT be nested inside static `<ol>` or `<ul>`. Ordered and unordered list loops MUST use `<loop:ol>` or `<loop:ul>` directly.
-* **Iteration Item Required:** `<loop:ol>` and `<loop:ul>` MUST wrap each iteration in `<li>...</li>` or `<p>...</p>` inside the loop body. A direct `<p>` is auto-wrapped into `<li>`. Any other content is a compile error. `<li>` is a pure container: it MUST contain `<p>` blocks and does NOT accept attributes.
-* **CRITICAL: Array Access Restriction:** Variables declared with `[]` (arrays) MUST NOT be accessed using object prefix syntax (`{{array.field}}`) outside a `<loop>`. Arrays can ONLY be accessed through `<loop>` constructs via a loop alias. Direct `{{array.field}}` access outside a loop is INVALID.
-
-```text
-INVALID:
-<loop x from jabatan>
-...
-</loop>
-<p>{{jabatan.nama}}</p>    ← WRONG: array accessed with object prefix outside loop
-
-VALID:
-<loop x from jabatan>
-<p>{{x.nama}}</p>
-</loop>
-```
-
-* **Loop-Specific Variable:** `{{index}}` is a built-in variable available ONLY inside loops. It returns the current loop iteration index in the format defined by `indexType=` (default: `1, 2, 3`). `{{index}}` MUST NOT be declared in `var=` or `keys=`.
-
-* **Index & Total Variables:** All index/total variables below are available inside any loop variant (`<loop>`, `<loop:ol>`, `<loop:ul>`, `<loop:row>`):
-
-  | Variable         | Meaning                                    |
-  |------------------|--------------------------------------------|
-  | `{{index}}`      | 1-based position (alias of `{{loop.index}}`) |
-  | `{{loop.index}}` | 1-based position (double-brace variant)    |
-  | `{index}`        | 1-based position (single braces)           |
-  | `{index+N}`      | Position offset by `N` (index starts at 0, so `{index+1}` = 1, 2, 3...) |
-  | `{{lastIndex}}`  | Last position (total count)                |
-  | `{{totalIndex}}` | Total count (same value as `{{lastIndex}}`) |
-  | `{lastIndex}`    | Single-brace form of `{{lastIndex}}`       |
-  | `{totalIndex}`   | Single-brace form of `{{totalIndex}}`      |
-
-  All forms respect `indexType=` when set: `a`/`A` produce lowercase/uppercase letters, `i`/`I` produce lowercase/uppercase roman numerals, `1` (default) produces numbers. `{{loop.index}}` takes priority over variable resolution.
-
-  ```text
-  <loop:ol x from items>
-    <li>
-      <p>{index+1}. {{x.label}}</p>
-    </li>
-  </loop:ol>
-
-  <loop:ul x from items>
-    <li>
-      <p>{{x.label}} ({{index}}/{{totalIndex}})</p>
-    </li>
-  </loop:ul>
-  ```
-
-  Renders `(1/3)`, `(2/3)`, `(3/3)` style counters.
-
-### C. Reserved Alias Names (FORBIDDEN)
-
-The following words MUST NOT be used as loop iteration aliases:
-
-* `loop`, `from`, `source`, `item`, `items`, `entry`, `entries`, `row`, `rows`, `col`, `cols`, `data`, `list`, `element`, `node`, `key`, `value`, `index`, `i`, `e`, `s`, `p`, `t`, `r`, `n`
-
-Use meaningful aliases that reflect the data (e.g., `person`, `founder`, `order`, `row`).
-
-### Valid Examples
-
-```text
+--- BODY ---
 <loop x from entries>
-<p>{{x.name}}</p>
+  {index+1}. {{x.field}}
 </loop>
+```
 
+Here `entries` is an array source declared as `[]entries` in `var=info, []entries`.
+
+### Tags
+
+| Tag                                              | Description                            |
+|--------------------------------------------------|----------------------------------------|
+| `<loop x from name>...</loop>`                   | Iterate array `name`, each item as `x` |
+| `<loop:ol x from name type=1>...</loop:ol>`      | Iterate + wrap `<ol>`; each iteration is `<li>` (explicit or auto-wrapped from `<p>`) |
+| `<loop:ul x from name>...</loop:ul>`             | Iterate + wrap `<ul>`; each iteration is `<li>` (explicit or auto-wrapped from `<p>`) |
+| `<loop:row x from name>...</loop:row>`           | Iterate into table rows                |
+
+> Closing tag MUST EXACTLY MATCH the opening variant: `<loop:ol>` closes with `</loop:ol>` (NOT `</loop>`).
+
+### Basic Loop
+
+```
+<loop x from entries>
+  <p>{{x.name}} — {{x.value}}</p>
+</loop>
+```
+
+- `x` — loop variable alias (any name)
+- `entries` — must match a name with `[]` prefix in `var=` (e.g. `var=info, []entries`)
+- Inside: `{{x.field}}` accesses a field on each array element
+
+### Loop with Ordered List
+
+Each iteration MUST be `<li>...</li>` (explicit) or `<p>...</p>` (auto-wrapped into `<li>`). `<li>` is a pure container — it holds `<p>` blocks and carries NO attributes; all attributes go on the inner `<p>`.
+
+**Explicit `<li>`:**
+
+```
 <loop:ol x from items type=A>
-  <p>{{x.label}}</p>            # auto-wrapped into <li>
+  <li>
+    <p>{{x.label}}</p>
+  </li>
 </loop:ol>
-
-<loop x from items indexType=a>
-<p>{{index}}. {{x.name}}</p>
-</loop>
 ```
 
-### Invalid Examples
+**Direct `<p>` (auto-wrapped into `<li>`):**
 
-```text
-<loop:ol type=A x from items>      # Attributes before iteration clause
-...
+```
+<loop:ol x from items type=A>
+  <p>{{x.label}}</p>
 </loop:ol>
+```
 
+Both render as `<ol type=A><li><p>value</p></li><li><p>value</p></li></ol>`. Default `type` is `1` (numeric). Supported: `1`, `a`, `A`, `i`, `I`.
+
+### Loop with Unordered List
+
+Each iteration MUST be `<li>...</li>` (explicit) or `<p>...</p>` (auto-wrapped into `<li>`). Accepts `bullet=` to choose the glyph (`circle` default, `square`, `check`, `dash`).
+
+**Explicit `<li>`:**
+
+```
+<loop:ul x from items bullet=square>
+  <li>
+    <p>{{x.label}}</p>
+  </li>
+</loop:ul>
+```
+
+**Direct `<p>` (auto-wrapped into `<li>`):**
+
+```
+<loop:ul x from founders bullet=dash>
+  <p>text</p>
+  <p>text</p>
+</loop:ul>
+```
+
+Both render as `<ul><li><p>value</p></li><li><p>value</p></li></ul>`.
+
+### Loop with Multi-Paragraph List Items
+
+Each `<li>` MUST contain one or more `<p>` blocks — the first is numbered/bulleted, the rest are unnumbered continuation paragraphs.
+
+```
 <loop:ul x from items>
-...
-</loop>
-
-<ol>
-<loop x from items>
-<li><p>{{x.label}}</p></li>
-</loop>
-</ol>                              # Use <loop:ol> instead; a standard <loop> inside a static list is forbidden
+  <li>
+    <p><b>{{x.label}}</b></p>
+    <p>{{x.desc}}</p>
+  </li>
+</loop:ul>
 ```
 
-## 9. CONDITIONALS
+A multi-paragraph item requires the explicit `<li>` form (direct `<p>` wraps each paragraph as its own item).
+
+### Loop Index Counter
+
+Use `{index+N}` (single braces) inside any loop variant to insert an auto-incrementing counter. Index starts at **0**, so `{index+1}` produces 1, 2, 3...
+
+| Pattern     | Result                |
+|-------------|-----------------------|
+| `{index+1}` | 1, 2, 3, 4, ...      |
+| `{index+0}` | 0, 1, 2, 3, ...      |
+| `{index+10}`| 10, 11, 12, 13, ...  |
+
+Works in `<loop>`, `<loop:ol>`, `<loop:ul>`, and `<loop:row>`:
+
+```
+<loop:ol x from items>
+  <li>
+    <p>{index+1}. {{x.label}}</p>
+  </li>
+</loop:ol>
+```
+
+Renders as `<ol><li><p>1. Item A</p></li><li><p>2. Item B</p></li><li><p>3. Item C</p></li></ol>`.
+
+#### `{{loop.index}}` — Double-Brace Variant
+
+Use `{{loop.index}}` (double braces) inside any loop for a 1-based counter. This variant works with double-brace syntax and takes priority over variable resolution.
+
+| Pattern           | Result                |
+|-------------------|-----------------------|
+| `{{loop.index}}`  | 1, 2, 3, 4, ...      |
+
+```
+<loop x from items>
+  <p>Item {{loop.index}}: {{x.name}}</p>
+</loop>
+```
+
+Multiple indexes in one template:
+
+```
+<loop x from entries>
+  <p>Entry #{index+1} of {{x.total}}: {{x.name}}</p>
+</loop>
+```
+
+#### Index & Total Variables
+
+All index/total variables below are available inside any loop variant, both in body text and in condition attributes (see [Conditionals](#7-conditionals)):
+
+| Variable         | Meaning                                    |
+|------------------|--------------------------------------------|
+| `{{index}}`      | 1-based position (alias of `{{loop.index}}`) |
+| `{{loop.index}}` | 1-based position                          |
+| `{index}`        | 1-based position (single braces)          |
+| `{index+N}`      | Position offset by `N`                    |
+| `{{lastIndex}}`  | Last position (total count)               |
+| `{{totalIndex}}` | Total count (same value as `{{lastIndex}}`) |
+| `{lastIndex}`    | Single-brace form of `{{lastIndex}}`      |
+| `{totalIndex}`   | Single-brace form of `{{totalIndex}}`     |
+
+All forms respect `indexType=` when set: `a`/`A` produce lowercase/uppercase letters, `i`/`I` produce lowercase/uppercase roman numerals, `1` (default) produces numbers.
+
+```
+<loop:ul x from items>
+  <li>
+    <p>{{x.label}} ({{index}}/{{totalIndex}})</p>
+  </li>
+</loop:ul>
+```
+
+Renders each item with its position and the total count, e.g. `(1/3)`, `(2/3)`, `(3/3)`.
+
+### Loop into Table Rows
+
+```
+<table border=1>
+<loop:row x from headers>
+  <col>{{x}}</col>
+</loop:row>
+<loop:row x from entries>
+  <col>{{x.field1}}</col>
+  <col>{{x.field2}}</col>
+</loop:row>
+</table>
+```
+
+- First `loop:row` iterates `headers` — each item is a cell value (`{{x}}`)
+- Second `loop:row` iterates `entries` — each item is an object (`{{x.field}}`)
+- Each iteration produces a `<row>` with `<col>` cells
+
+### Full Example
+
+```
+[section 0]
+name=products
+var=info, []items
+keys=title, items.date, items.price
+formats=[items.date:dd-MM-yyyy], [items.price:#,##0.00]
+
+--- BODY ---
+<h1>{{info.title}}</h1>
+<table border=1 width=100%>
+  <loop:row x from items>
+    <col>{{x.name}}</col>
+    <col align=right>{{x.price}}</col>
+    <col>{{x.date}}</col>
+  </loop:row>
+</table>
+```
+
+Fields from array objects (`items.date`, `items.price`) use dotted path notation in `keys` and `formats`. See [Format for Array Fields](#format-for-array-fields).
+
+## 7. Conditionals
 
 Conditionally render content based on data values using `<if>`, `<elif>`, and `<else>`.
 
 ### Tags
 
-| Tag | Description |
-|-----|-------------|
-| `<if var="expr">...</if>` | Render content only when `expr` is true. Standalone (simple) form. |
-| `<w-if use=[...]>...</w-if>` | Wrapper for an if/elif/else chain. MUST list every variable used in `use=[...]`. |
-| `<elif var="expr">...</elif>` | Additional branch inside `<w-if>` (optional, any number). |
-| `<else>...</else>` | Fallback branch inside `<w-if>` (optional, at most one, and MUST be last). |
+| Tag                                  | Description                                                                  |
+|--------------------------------------|------------------------------------------------------------------------------|
+| `<if var="expr">...</if>`            | Render content only when `expr` is true. Standalone (simple) form.           |
+| `<w-if use=[...]>...</w-if>`         | Wrapper for an if/elif/else chain. MUST list every variable used in `use=[...]`. |
+| `<elif var="expr">...</elif>`        | Additional branch inside `<w-if>` (optional, any number).                    |
+| `<else>...</else>`                   | Fallback branch inside `<w-if>` (optional, at most one, and MUST be last).   |
 
 ### Simple `<if>` (standalone)
 
-```text
+```
 <if var="{{info.status}} == 'active'">
 <p>Visible only when status is active.</p>
 </if>
@@ -948,15 +1153,15 @@ Conditionally render content based on data values using `<if>`, `<elif>`, and `<
 
 Rules:
 
-* Standalone `<if>` renders its content only when the condition is true; otherwise the content is dropped.
-* Both `{{path}}` and bare paths are supported: `var="{{info.status}} == 'active'"` or `var="info.status == 'active'"`.
-* A bareword resolves to data when present; otherwise it is treated as a **literal string**.
-* A `{{path}}` left unresolved after variable resolution means the variable is missing and is treated as **empty** (use with `is empty`).
-* `<elif>` and `<else>` are NOT allowed outside a `<w-if>` wrapper.
+- Standalone `<if>` renders its content only when the condition is true; otherwise the content is dropped.
+- Both `{{path}}` and bare paths are supported: `var="{{info.status}} == 'active'"` or `var="info.status == 'active'"`.
+- A bareword resolves to data when present; otherwise it is treated as a **literal string**.
+- A `{{path}}` left unresolved after variable resolution means the variable is missing and is treated as **empty** (use with `is empty`).
+- `<elif>` and `<else>` are NOT allowed outside a `<w-if>` wrapper.
 
 ### `<w-if>` chain
 
-```text
+```
 <w-if use=[info.role]>
 <if var="info.role == 'admin'">
 <p>Admin panel</p>
@@ -972,19 +1177,19 @@ Rules:
 
 Rules:
 
-* `<w-if>` MUST contain exactly one `<if>` first, then zero or more `<elif>`, then at most one `<else>` (last).
-* Branches close themselves: `<if>...</if>`, `<elif>...</elif>`, `<else>...</else>`.
-* No other content is allowed between the branch tags inside `<w-if>` (compile error).
-* The first branch whose condition is true is rendered; the rest are dropped. If no branch matches and there is no `<else>`, nothing is rendered.
-* Nested `<if>`/`<w-if>` blocks are allowed inside any branch body.
+- `<w-if>` MUST contain exactly one `<if>` first, then zero or more `<elif>`, then at most one `<else>` (last).
+- Branches close themselves: `<if>...</if>`, `<elif>...</elif>`, `<else>...</else>`.
+- No other content is allowed between the branch tags inside `<w-if>` (compile error).
+- The first branch whose condition is true is rendered; the rest are dropped. If no branch matches and there is no `<else>`, nothing is rendered.
+- Nested `<if>`/`<w-if>` blocks are allowed inside any branch body.
 
 ### `use=` — declared variables
 
 `use=[...]` MUST list every variable referenced by the branch conditions:
 
-* Root keys and dotted paths: `info`, `info.role`, `founder.name`
-* Loop aliases and fields: `x`, `x.done`
-* Loop index variables: `index`, `lastIndex`, `totalIndex`
+- Root keys and dotted paths: `info`, `info.role`, `founder.name`
+- Loop aliases and fields: `x`, `x.done`
+- Loop index variables: `index`, `lastIndex`, `totalIndex`
 
 Any reference in a branch `var=` that is not covered by a `use=` entry is a **compile error**. A reference is covered when it equals a `use=` entry or is an ancestor/descendant of one (e.g. `use=[info]` covers `info.role`).
 
@@ -992,19 +1197,19 @@ Literals inside `<w-if>` conditions MUST be quoted — barewords are always vari
 
 ### Operators
 
-| Operator | Meaning |
-|----------|---------|
-| `==`, `!=` | Equality / inequality |
+| Operator       | Meaning                                                          |
+|----------------|------------------------------------------------------------------|
+| `==`, `!=`     | Equality / inequality                                            |
 | `>`, `>=`, `<`, `<=` | Comparison (numeric when both sides are numbers, else string) |
-| `is empty` | Operand is an empty or missing value |
-| `is not empty` | Operand has a value |
-| `and` | Logical AND (binds tighter than `or`) |
-| `or` | Logical OR |
-| `( ... )` | Grouping |
+| `is empty`     | Operand is an empty or missing value                             |
+| `is not empty` | Operand has a value                                              |
+| `and`          | Logical AND (binds tighter than `or`)                            |
+| `or`           | Logical OR                                                       |
+| `( ... )`      | Grouping                                                         |
 
 Examples:
 
-```text
+```
 <if var="info.total > 100 and (info.limit == 0 or info.limit >= info.total)">
 <if var="{{missing}} is empty">placeholder</if>
 <if var="info.name is not empty">{{info.name}}</if>
@@ -1015,7 +1220,7 @@ Examples:
 
 Inside a loop, bare `x.field` references in `var=` and `use=[...]` resolve per item, and the loop index variables are available:
 
-```text
+```
 <loop:ul x from items>
 <li>
 <if var="x.done == 'yes'">
@@ -1028,9 +1233,9 @@ Inside a loop, bare `x.field` references in `var=` and `use=[...]` resolve per i
 </loop:ul>
 ```
 
-* `x.field` — the current item's field
-* `index` — current position (1-based, respects `indexType`)
-* `lastIndex` / `totalIndex` — last position / total count
+- `x.field` — the current item's field
+- `index` — current position (1-based, respects `indexType`)
+- `lastIndex` / `totalIndex` — last position / total count
 
 The `{{...}}` forms work too (`{{x.field}}`, `{{index}}`, `{{lastIndex}}`, `{{totalIndex}}`). To test a possibly missing field, prefer `{{x.field}} is empty`.
 
@@ -1038,17 +1243,46 @@ The `{{...}}` forms work too (`{{x.field}}`, `{{index}}`, `{{lastIndex}}`, `{{to
 
 Conditions are evaluated after variable resolution (`{{...}}`) and loop expansion, so values are final before any branch is chosen.
 
----
+## 8. Images
 
-## 10. LINKS
+From data section:
+
+```
+[section 0]
+name=gallery
+var=source
+keys=img, caption
+
+--- BODY ---
+<img={{source.img}} width=80% align=center>
+<p><i>{{source.caption}}</i></p>
+```
+
+Static path:
+
+```
+<img=./assets/photo.jpg width=3in>
+```
+
+### Properties
+
+| Property   | Example        | Description                 |
+|------------|----------------|-----------------------------|
+| `width`    | `80%`, `3in`   | Width (% of page width, or inches) |
+| `height`   | `2in`          | Height (inches)             |
+| `align`    | `center`       | `left`, `center`, `right`   |
+| `alt`      | "photo"        | Alternative text            |
+| `border`   | `1`            | Single border on all sides (flag; value not converted to a length) |
+| `bg`  | `#f0f0f0`      | Background container        |
+
+## 9. Links
 
 Internal and external hyperlinks.
 
 From data section:
 
-```ini
-[section 0]
-name=source
+```
+<section 0>
 var=source
 keys=url, label
 
@@ -1058,48 +1292,164 @@ keys=url, label
 
 Static:
 
-```text
+```
 <a=https://example.com>visit website</a>
 ```
 
 Inline:
 
-```text
+```
 <p>click <a={{source.url}} target=_blank>here</a> for more info</p>
 ```
 
 ### Properties
 
-| Property | Example | Description |
-|----------|---------|-------------|
-| `target` | `_blank` | Open in new tab |
-| `color` | `#0055cc` | Link color |
-| `underline` | `true` | Underline |
+| Property    | Example         | Description          |
+|-------------|-----------------|----------------------|
+| `target`    | `_blank`        | Open in new tab (DOCX always opens external links in new window) |
+| `color`     | `#0055cc`       | Link color           |
+| `underline` | `true`          | Underline            |
+
+> **Limitation:** Hyperlinks render as blue underlined text but are **not clickable** in the DOCX output. The `godocx v0.1.5` library's `Hyperlink` struct lacks proper OOXML serialization (`<Children>` wrapper instead of raw `<w:r>`), which Word ignores. This affects all `<a=>` usage (inline and standalone). See [`KNOWN-LIMITATIONS.md`](/KNOWN-LIMITATIONS.md) for details.
 
 ### Bookmark
 
-```text
+```
 <a=#chapter1>see Chapter 1</a>
 ```
 
----
+## 10. Page & Section Breaks
 
-## 11. METADATA
-
-```ini
-[title]
-title=    # accessible as {{title}}
-subject=  # accessible as {{subject}}
-author=   # accessible as {{author}}
-
+### Page Break
 
 ```
+--- BODY ---
+<p>page 1</p>
+<pb>
+<p>page 2</p>
+```
 
-## 12. HEADER & FOOTER
+| Tag              | Description       |
+|------------------|-------------------|
+| `<pb>`           | Page break        |
+| `<page-break>`   | Alias for `<pb>`  |
+| `<tab>`          | Tab character     |
+| `<tab size=N>`   | Tab with N spaces |
+
+`<tab>` can appear inside `<p>` paragraphs to insert a tab stop. The optional `size=N` attribute sets
+an explicit number of spaces (defaults to one standard tab).
+
+```
+<p>Name:<tab>John Doe</p>
+<p>Age:<tab size=4>25</p>
+```
+
+### Section Break
+
+```
+[section 0]
+name=cover
+var=info
+keys=title, author
+
+--- BODY ---
+<h1>{{info.title}}</h1>
+<p>{{info.author}}</p>
+
+[section:next-page 1]
+
+--- BODY ---
+<p>new section after page break</p>
+```
+
+| Syntax                           | Description                           |
+|----------------------------------|---------------------------------------|
+| `[section:next-page N]`          | Section break + page break            |
+
+`N` = section sequence number.
+
+## 11. Metadata
+
+Set document properties like title, subject, and author using the `[title]` section.
+
+```
+[title]
+title=Document Title
+subject=Document Subject
+author=Author Name
+```
+
+### Properties
+
+| Property  | Description                          | Example                    |
+|-----------|--------------------------------------|----------------------------|
+| `title`   | Document title                       | Annual Report 2025         |
+| `subject` | Document subject/description         | Financial Summary          |
+| `author`  | Document author/creator              | Finance Team               |
+
+These properties are written to:
+- **DOCX:** Document properties (`docProps/core.xml`)
+
+
+### Built-in Variable: `{{title}}`
+
+The `title` property can be referenced in headers and footers using the `{{title}}` variable.
+
+```
+[title]
+title=My Report
+
+[header]
+left={{title}}
+right={{date}}
+
+[footer]
+center={{title}} - Page {{page}}
+```
+
+### Full Example
+
+```
+[style]
+layout=A4
+
+[title]
+title=Quarterly Business Review
+subject=Q4 2024 Performance Report
+author=Executive Team
+
+[header]
+left={{title}}
+right={{date}}
+font-size=8pt
+color=#666666
+
+[section 0]
+
+--- BODY ---
+<h1>{{title}}</h1>
+<p>Prepared by: Finance Department</p>
+```
+
+The document will have:
+- Title property set to "Quarterly Business Review"
+- Subject set to "Q4 2024 Performance Report"
+- Author set to "Executive Team"
+- Header showing the title and current date
+- Body displaying the title as heading
+
+### Notes
+
+- All properties are optional
+- Properties are visible in document properties dialog (DOCX)
+- The `{{title}}` variable only works in headers/footers and body content
+- Use `{{date}}` for current date, `{{page}}` for page numbers
+
+## 12. Header & Footer
 
 Header and footer for document pages.
 
-```ini
+```
 [header]
 left={{title}}
 right={{page}} / {{total}}
@@ -1118,7 +1468,7 @@ center={{date}}
 | `justify_between` | 2 or 3 comma-separated items spread evenly via tab stops. Use `\,` for literal comma |
 | `font-family` | Header/footer font override            |
 | `font-size`   | Font size (pt suffix required, e.g. `9pt`) |
-| `color`       | Text color                             |
+| `color`  | Text color                             |
 | `border`      | `top`, `bottom`, `none`                |
 | `margin`      | Distance from header/footer to content |
 | `first-page`  | `true` / `false` — show on page 1     |
@@ -1128,7 +1478,7 @@ center={{date}}
 
 Replaces `left`/`center`/`right` with evenly-spaced columns using OOXML tab stops.
 
-```ini
+```
 [header]
 justify_between={{title}}, {{page}} / {{total}}
 
@@ -1156,7 +1506,7 @@ Works with all header/footer variables and font styling properties.
 
 ### Full Example
 
-```ini
+```
 [style]
 layout=A4
 unit=inch
@@ -1179,72 +1529,31 @@ margin=0.2
 first-page=false
 ```
 
-## 13. THE PREDICTABLE VS. UNPREDICTABLE RULE (ZERO TOLERANCE)
+### justify_between Example
 
-The predictable input defines the initial schema available to the compiler.
+```
+[style]
+layout=A4
+unit=inch
+m=1
 
-During document analysis, the compiler MAY discover additional objects, arrays, or keys that are referenced by the document but are absent from the predictable input. These declarations are classified as **Unpredictable**.
+[header]
+justify_between={{title}}, {{page}} / {{total}}
+font-size=10pt
+color=#999999
+border=bottom
+margin=0.3
 
-### A. Predictable Declarations
-
-Predictable declarations originate from the provided predictable input.
-
-They MAY be referenced directly by:
-
-* `var=`
-* `keys=`
-
-No additional declaration is required.
-
----
-
-### B. Unpredictable Declarations
-
-If the document references an object, array, or key that does not exist in the predictable input, the compiler MUST declare it in the corresponding unpredictable block.
-
-* Objects and arrays → `[object-unpredictable]`
-* Standalone keys → `[keys-unpredictable]`
-
-These blocks extend the predictable schema.
-
----
-
-### C. Registration Rule (CRITICAL)
-
-Declaring an unpredictable object or key DOES NOT automatically register it for use.
-
-Every declaration used in `--- BODY ---` MUST still be explicitly registered inside the owning section.
-
-Specifically:
-
-* every object or array MUST appear in `var=`;
-* every standalone key MUST appear in `keys=`.
-
-The unpredictable blocks define additional schema only. They NEVER replace `var=` or `keys=` declarations.
-
----
-
-### D. Syntax
-
-```ini
-[object-unpredictable]
-
-founders[]=birthplace,birthday
-company=license_number,license_date
-
-[keys-unpredictable]
-
-document_code
-reference_number
+[footer]
+justify_between=Dept. A\, B\, and C, {{date}}, Page {{page}}
+font-size=9pt
+color=#666666
+border=top
+margin=0.2
 ```
 
----
+## See Also
 
-### E. Validation Rules
-
-Before generating the final document, the compiler MUST verify:
-
-- Every object or array used in `--- BODY ---` is registered in `var=`.
-- Every standalone key used in `--- BODY ---` is registered in `keys=`.
-- Every unpredictable declaration is declared in the appropriate unpredictable block.
-- No declaration appears in both predictable and unpredictable definitions.
+- `dcd-cli` — CLI usage and options
+- `golang-programming` — Go library API
+- `dcd-guide` — Project overview and patterns

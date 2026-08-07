@@ -23,6 +23,9 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- DYNAMIC content (data values, names, dates, amounts — anything that will be filled by a variable) MUST be replaced by its {{var}} / {{var.field}} placeholder. Never write the source value literally for dynamic content; never drop it either.\n")
 	b.WriteString("Never drop, skip, omit, merge, truncate, reorder, or summarize any source text. The full document must be representable from your template.\n\n")
 	b.WriteString("INLINE ATTRIBUTES: Preserve inline tag attributes verbatim when the DCD equivalent tag supports them. Examples: <u underline=\"double\"> → <set:u underline=double>; <span highlight=\"yellow\"> → <mark color=yellow>; <a href=...> keeps target/color/underline. Do NOT strip, rename, or flatten an inline attribute into a [style] block or a paragraph attribute when the inline tag accepts it. Only fall back when DCD has no inline equivalent.\n\n")
+	b.WriteString("PRESERVE FONT-FAMILY: Never miss a font-family declaration. Carry it over wherever it appears — inside <span>, on paragraphs (<p>), headings, or any other tag that supports it.\n")
+	b.WriteString("PRESERVE <span> AND <tab>: Never miss <span> or <tab> tags. Every <span> (with all its attributes) and every <tab>, <tab/>, or <tab size=N> in the source MUST appear in the output — do not merge, flatten, or drop them.\n")
+	b.WriteString("PRESERVE tabs ATTRIBUTE: When the source document defines a tabs attribute on a paragraph, the DCD output MUST include the corresponding tabs attribute. Do not omit it.\n\n")
 
 	b.WriteString("=== DCD DSL SPECIFICATION ===\n")
 	b.WriteString(dcdSpec)

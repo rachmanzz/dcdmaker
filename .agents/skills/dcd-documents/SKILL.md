@@ -72,20 +72,20 @@ unit=cm
 layout=A4
 w=21
 h=29.7
-m-t=2.5
-m-b=2.5
-m-l=3
-m-r=3
+mt=2.5
+mb=2.5
+ml=3
+mr=3
 font-family="Times New Roman"
-line-height=1.5
+line-spacing=1.5
 
 [style:heading-1]
 font-family="Times New Roman"
 font-size=28pt
 color=#2b5797
 bold=true
-space-before=18
-space-after=12
+space-before=18pt
+space-after=12pt
 
 ```
 
@@ -95,14 +95,18 @@ space-after=12
 [style]
 layout=A4                    # A4, letter, legal, A3, A5, B5, custom
 unit=inch                    # inch, cm, mm, pt, pica
-orientation=portrait         # portrait, landscape
+orientation=portrait         # portrait, landscape (landscape swaps w/h)
 font-family="Arial"
 font-size=12pt              # MUST include pt suffix (bare number is an error)
 color=#000000
-line-height=1.5
+line-spacing=1.5
 
 
 ```
+
+**Unit Resolution (MANDATORY):** All length values (margins, page `w`/`h`, `space-before`/`space-after`, `indent-left`/`indent-hanging`/`indent-right`/`first-line`, `line-spacing` with `line-rule=exact`/`atLeast`, tab-stop positions, header/footer margins) use the declared `unit`. A bare number means the declared unit; any other unit MUST include a suffix (`12pt`, `2cm`, `5mm`). `font-size` and `letter-spacing` are ALWAYS in `pt` and the suffix is MANDATORY (`font-size=12pt`, `letter-spacing=1pt` — a bare number is an error).
+
+**KEBAB-CASE MANDATORY:** All attribute names are lowercase kebab-case (e.g. `space-before`, `line-spacing`, `first-line`, `mt`). camelCase forms (`indentLeft`, `lineSpacing`, `lineRule`) and any other casing are INVALID and silently ignored. Write exactly the kebab-case form documented in this specification.
 
 ### C. Custom Layout & Margins
 
@@ -125,15 +129,15 @@ Global default for paragraph indentation, applied to all `<p>` unless overridden
 
 ```ini
 [style]
-indent=0.5
-hanging=0.25
+indent-left=0.5
+indent-hanging=0.25
 
 ```
 
-* `indent` — left indent (in document unit)
-* `hanging` — hanging indent (in document unit)
+* `indent-left` — left indent (in document unit)
+* `indent-hanging` — hanging indent (in document unit)
 
-Inline `<p indent=X>` / `<p hanging=Y>` overrides this default. `<li>` does NOT accept attributes — set them on the inner `<p>` (see Section 7). See [Paragraph Properties](#paragraph-choices-wrapper-w-vs-rich-p) for details.
+Inline `<p indent-left=X>` / `<p indent-hanging=Y>` overrides this default. `<li>` does NOT accept attributes — set them on the inner `<p>` (see Section 7). See [Paragraph Properties](#paragraph-choices-wrapper-w-vs-rich-p) for details.
 
 ### E. Named Paragraph Styles
 
@@ -143,13 +147,13 @@ Define reusable paragraph styles with `[style:paragraph <name>]` and apply them 
 [style:paragraph quote]
 font-size=14pt
 color=#666666
-indent=1
+indent-left=1
 border=1pt
 
 [style:paragraph code-block]
 font-family="Consolas"
 font-size=10pt
-line-height=1.2
+line-spacing=1.2
 space-before=6pt
 space-after=6pt
 ```
@@ -163,18 +167,24 @@ Usage:
 
 **Rules:**
 1. Section name format: `[style:paragraph <name>]`
-2. Supports all paragraph properties (alignment, indent, hanging, spacing, line-height, borders, shading, font, color, etc.)
+2. Supports all paragraph properties (alignment, indent-left, indent-hanging, spacing, line-spacing, borders, shading, font, color, etc.)
 3. Apply via `style=<name>` on `<p>` or `<h1>`–`<h9>`
 4. Inline attributes on the tag override the named style
 5. Named style overrides the global `[style]` default
 6. Style names may contain spaces. When applying, wrap the name in double quotes: `<p style="Body Text Indent 2">`. In the section definition the name may be bare (`[style:paragraph Body Text Indent 3]`) or, for multi-word names, wrapped in quotes (`[style:paragraph "Body Text Indent 3"]`) — both register the same `Body Text Indent 3`.
+
+**Style Precedence (high → low):**
+1. Inline attribute on the tag (`<p align=center>`, `<h1 color=red>`)
+2. `[style:paragraph <name>]` applied via `style=`
+3. `[style:heading-N]` heading style (headings only)
+4. `[style]` global default
 
 In lists:
 
 ```text
 [style:paragraph highlight]
 shading=#ffffcc
-indent=0.5
+indent-left=0.5
 
 <ul>
 <li>
@@ -290,7 +300,7 @@ formats=[seller.birthdate:dd-MM-yyyy]
 
 The following rules are absolute. Violation of any rule produces an invalid DCD document.
 
-* **Duplicate Attributes:** Each attribute MAY appear only once within a tag (e.g., `<p hanging=0.3 hanging=0.3>` is INVALID).
+* **Duplicate Attributes:** Each attribute MAY appear only once within a tag (e.g., `<p indent-hanging=0.3 indent-hanging=0.3>` is INVALID).
 
 * **Section Limits:** A section MUST NOT exceed the maximum allowed `var` or `keys` entries defined by this specification.
 
@@ -358,8 +368,8 @@ Even if the wrapper already declares the same formatting flag, the inner tag is 
 * **Supported Attributes:**
   * `size` or `font-size`
   * `color`
-  * `indent`
-  * `hanging`
+  * `indent-left`
+  * `indent-hanging`
 
   Indentation values MUST use the document unit defined by `[style]`.
 
@@ -406,33 +416,20 @@ A paragraph MUST use `<p>` whenever inline formatting varies within the paragrap
 
 Nested inline tags are permitted.
 
-Supported attributes:
-
-* `align=left|center|right|justify`
-* `size`
-* `color`
-* `indent`
-* `hanging`
-* `tab-stops` (see Section 5.B.5)
-
-Indentation values MUST use the document unit defined by `[style]`.
-
-#### 3. Paragraph Properties
-
 `<p>` and `<h1>`–`<h9>` accept the following paragraph-level attributes. `<li>` does NOT accept attributes — set them on the inner `<p>`.
 
 > **QUOTED VALUES:** Any attribute value may be wrapped in double quotes — this is REQUIRED when the value contains spaces (e.g. `style="Body Text Indent 3"`). Quoted values are stripped of their surrounding quotes; bare values must not contain spaces. Unquoted single-word values are unchanged and remain the common form.
 
 ##### Indent
 
-| Property       | Example            | Description                                      |
-|----------------|--------------------|--------------------------------------------------|
-| `indent`       | `indent=0.5`       | Left indent (in document unit)                   |
-| `indent-right` | `indent-right=0.5` | Right indent (in document unit)                  |
-| `hanging`      | `hanging=0.25`     | Hanging indent (removed from first line)         |
-| `first-line`   | `first-line=0.5`   | Extra indent for first line only                 |
+| Property         | Example                  | Description                                      |
+|------------------|--------------------------|--------------------------------------------------|
+| `indent-left`    | `indent-left=0.5`        | Left indent (in document unit)                   |
+| `indent-right`   | `indent-right=0.5`       | Right indent (in document unit)                  |
+| `indent-hanging` | `indent-hanging=0.25`    | Hanging indent (removed from first line)         |
+| `first-line`     | `first-line=0.5`         | Extra indent for first line only                 |
 
-`hanging` and `first-line` are mutually exclusive — if both are set, `first-line` takes precedence.
+`indent-hanging` and `first-line` are mutually exclusive — if both are set, `first-line` takes precedence.
 
 ##### Spacing
 
@@ -440,24 +437,24 @@ Indentation values MUST use the document unit defined by `[style]`.
 |----------------|----------------------|------------------------------------------------------|
 | `space-before` | `space-before=12pt`  | Space before paragraph (layout unit)                 |
 | `space-after`  | `space-after=6pt`    | Space after paragraph (layout unit)                  |
-| `line-height`  | `line-height=1.5`    | Line spacing: multiplier (bare number) or exact value with unit suffix (`12pt`, `0.17in`, `6mm`) |
-| `line-rule`    | `line-rule=exact`    | Line spacing rule: `auto` (default), `exact`, `atLeast`. Only applied when `line-height` is also set. |
+| `line-spacing` | `line-spacing=1.5`   | Line spacing: multiplier (bare number) or exact value with unit suffix (`12pt`, `0.17in`, `6mm`) |
+| `line-rule`    | `line-rule=exact`    | Line spacing rule: `auto` (default), `exact`, `atLeast`. Only applied when `line-spacing` is also set. |
 
-`line-height` accepts two forms:
+`line-spacing` accepts two forms:
 
 1. **Multiplier** — bare number (no unit suffix): `1.5`, `2.0`, `1.2`
-   - `line-height=1.5` → 1.5× normal line spacing
+   - `line-spacing=1.5` → 1.5× normal line spacing
    - `line-rule` defaults to `auto`
 
 2. **Exact** — value with unit suffix: `12pt`, `0.17in`, `6mm`, `1cm`
-   - `line-height=12pt` → exactly 12pt line height
+   - `line-spacing=12pt` → exactly 12pt line height
    - Use with `line-rule=exact` or `line-rule=atLeast`
 
 ```text
-<p line-height=1.5>1.5× normal spacing</p>
-<p line-height=12pt line-rule=exact>exactly 12pt line height</p>
-<p line-height=0.17in line-rule=exact>exactly 0.17 inch</p>
-<p line-height=6mm line-rule=atLeast>minimum 6mm line height</p>
+<p line-spacing=1.5>1.5× normal spacing</p>
+<p line-spacing=12pt line-rule=exact>exactly 12pt line height</p>
+<p line-spacing=0.17in line-rule=exact>exactly 0.17 inch</p>
+<p line-spacing=6mm line-rule=atLeast>minimum 6mm line height</p>
 ```
 
 ##### Borders
@@ -488,26 +485,26 @@ Border color uses `border-color` (default `auto`).
 | `dir`          | `dir=rtl` / `dir=ltr`    | Text direction                                     |
 | `valign`       | `valign=center`          | Vertical alignment within line: `auto`, `top`, `center`, `baseline`, `bottom` |
 
-##### words-XML → DCD attribute mapping (MANDATORY)
+##### DCD Attribute Reference (Summary)
 
-| words-XML attr | DCD attr | Notes |
-|----------------|----------|-------|
-| `align`        | `align`  | `both` MUST become `justify` (DCD has no `both`) |
-| `indentLeft`   | `indent` | |
-| `indentRight`  | `indent-right` | |
-| `indentFirst`  | `first-line` | |
-| `indentHanging`| `hanging` | |
-| `spacingBefore`| `space-before` | |
-| `spacingAfter` | `space-after` | |
-| `lineSpacing`  | `line-height` | `lineRule="auto"` → bare multiplier; `lineRule="exact"`/`atLeast` → value is a physical length in the declared unit and MUST get a unit suffix (bare would be misread as multiplier) |
-| `lineRule`     | `line-rule` | |
-| `shd`          | `shading` | |
-| `keepNext`     | `keep-next` | |
-| `keepLines`    | `keep-lines` | |
-| `widowControl` | `widow-control` | |
-| `sectionBreak` | `section-break` | `nextPage` → `true` |
+Quick reference for commonly used paragraph attributes. See subsections above for detailed descriptions.
 
-`tabs` (words-XML per-paragraph effective stops) MAY be skipped — the DCD `tab-stops` format differs and is optional.
+| DCD attr       | Notes |
+|----------------|-------|
+| `align`        | `both` MUST become `justify` (DCD has no `both`) |
+| `indent-left`  | Left indent |
+| `indent-right` | Right indent |
+| `indent-hanging` | Hanging indent |
+| `first-line`   | First line indent |
+| `space-before` | Space before paragraph |
+| `space-after`  | Space after paragraph |
+| `line-spacing` | Line spacing (multiplier or exact) |
+| `line-rule`    | Line spacing rule: `auto`, `exact`, `atLeast` |
+| `shading`      | Paragraph background color |
+| `keep-next`    | Keep with next paragraph |
+| `keep-lines`   | Keep lines together |
+| `widow-control`| Widow control |
+| `section-break`| `nextPage` → `true` |
 
 ---
 
@@ -537,8 +534,60 @@ Rules:
 
 If more than one formatting style applies to the same text, these tags MUST NOT be nested. Use `<set:...>` instead.
 
+#### 2. Run-Level Formatting (`<span>`)
 
-#### 2. Combined Formatting (`<set:...>`) — CANONICAL SYNTAX
+`<span>` applies run-level attributes to text. Use **ONLY when needed** — for attributes that have no dedicated inline tag.
+
+**Dedicated tags take precedence:**
+* `bold` → use `<b>`
+* `italic` → use `<i>`
+* `strikethrough` → use `<s>`
+* `underline` → use `<u>` or `<u style=...>`
+
+**`<span>` attributes:**
+
+| Attribute        | Example                      | Description                          |
+|------------------|------------------------------|--------------------------------------|
+| `color`          | `color=#FF0000`              | Text color (hex or name)             |
+| `bg`             | `bg=#ffffcc`                 | Background shading                   |
+| `font-size`      | `font-size=18pt`             | Font size                            |
+| `font-family`    | `font-family="Courier New"`  | Font family                          |
+| `caps`           | `caps=true`                  | All caps                             |
+| `small-caps`     | `small-caps=true`            | Small caps                           |
+| `letter-spacing` | `letter-spacing=1pt`         | Letter spacing                       |
+
+**Examples:**
+
+```text
+<p><span color=#FF0000>red text</span> and <span bg=#ffffcc>highlighted</span></p>
+<p><span font-family="Courier New" font-size=10pt>small monospace</span></p>
+<p><span color=#0000FF>blue <b>and bold</b> rest</span></p>
+```
+
+**CRITICAL RULES:**
+
+1. **No Nested `<span>`:** `<span>` inside `<span>` is INVALID (parse error).
+
+2. **No Redundant Attributes:** `<span>` MUST NOT repeat the same attribute value already set by its parent `<p>` or `<li>`.
+
+   ```text
+   INVALID (redundant font-family):
+   <p font-family="Arial">Normal text <span font-family="Arial">also Arial</span></p>
+
+   VALID (different font-family):
+   <p font-family="Arial">Normal text <span font-family="Courier New">monospace</span></p>
+
+   VALID (parent has no font-family, span sets it):
+   <p>Normal text <span font-family="Courier New">monospace</span></p>
+   ```
+
+3. **Compose with Other Tags:** `<span>` can contain other inline tags (`<b>`, `<i>`, etc.):
+
+   ```text
+   <p><span color=#0000FF>blue <b>and bold</b> text</span></p>
+   ```
+
+#### 3. Combined Formatting (`<set:...>`) — CANONICAL SYNTAX
 
 `<set:...>` is the REQUIRED representation whenever two or more formatting styles apply to the same text.
 
@@ -574,7 +623,7 @@ Examples:
 <set:b|u underline=wavy>Important</set:b|u>
 ```
 
-#### 3. Forbidden Representations
+#### 4. Forbidden Representations
 
 The following representations are INVALID because `<set:...>` is the canonical syntax for combined formatting.
 
@@ -600,50 +649,57 @@ Equivalent valid representations:
 <set:i|s>Italic Strike</set:i|s>
 ```
 
-#### 4. Tab
+#### 5. Tab
 
-`<tab>` inserts a tab character.
-
-Optional:
+`<tab>` inserts a tab character. Allowed inside `<p>`, `<li>`, and `<w:*>` tags.
 
 ```text
-<tab size=4>
+<tab>         Tab character
+<tab/>        Self-closing form (same as <tab>)
+<tab size=4>  Tab with N spaces
 ```
 
 Only the `size` attribute is permitted.
 
-#### 5. Tab Stops
+**Tab Inside `<w:*>` Tags:**
 
-`tab-stops` is a paragraph-level attribute that defines tab stop positions. It applies to `<p>` and `<h1>`–`<h9>` (NOT `<w:*>` or `<li>`).
-
-```text
-<p tab-stops=720:L:none,1440:C:dot>content</p>
-```
-
-Tab stop format: `<position>:<alignment>:<leader>`:
-
-* **position:** integer in twips OR value with unit suffix
-* **alignment:** `L` left, `C` center, `R` right, `D` decimal
-* **leader:** `none`, `dot`, `hyphen`, `underscore`, `middleDot`
-
-**Position Formats:**
-
-1. **Twips (backward compatible)** — bare integer: `720`, `1440`, `2880`
-   * 1 inch = 1440 twips
-   * No unit suffix required
-2. **With unit suffix** — `0.5in`, `2cm`, `25mm`
-   * Supported units: `in`, `inch`, `cm`, `mm`, `pt`, `pica`
-   * Automatically converted to twips
+`<tab>`, `<tab/>`, and `<tab size=N>` ARE allowed inside `<w:*>` tags (alongside `<br>`):
 
 ```text
-<p tab-stops=720:L:none,2880:R:dot>twips format</p>
-
-<p tab-stops=0.5in:L:none,2in:R:hyphen>inch format</p>
-
-<p tab-stops=2cm:L:dot,5cm:R:underscore>cm format</p>
-
-<p tab-stops=720:L:none,1in:R:dot,2.5cm:C:hyphen>mixed formats</p>
+<w:c|b>Name:<tab>John Doe</w:c|b>
+<w:c>City:<tab size=4>Jakarta</w:c>
+<w:b>Phone:<tab/>+62-812-3456-7890</w:b>
 ```
+
+This enables formatted key-value layouts with tab stops inside centered, bold, or other styled blocks.
+
+#### 6. Tab Stops (Paragraph-Level)
+
+`tabs` is a paragraph-level attribute that defines tab stop positions. It applies to `<p>` and `<h1>`–`<h9>` (NOT `<w:*>` or `<li>`).
+
+```text
+<p tabs="0.32 0.63 0.95 1.26">quarter-inch tabs</p>
+```
+
+Tab stop format:
+
+* **position:** length in document unit (bare = document unit; suffix allowed: `in`, `cm`, `mm`, `pt`, `pica`)
+* **@alignment** (optional): `L` left, `C` center, `R` right, `D` decimal
+* **:leader** (optional): `none`, `dot`, `hyphen`, `underscore`, `middleDot`
+
+Plain positions default to `L` / `none`. Positions with and without `@align:leader` can be mixed:
+
+```text
+<p tabs="0.32 0.63 0.95 1.26">quarter-inch tabs</p>
+
+<p tabs="6.10@right:hyphen">right-aligned with hyphen leader</p>
+
+<p tabs="0.5 1in@right:dot 2.5cm@center:hyphen">mixed formats</p>
+
+<p tabs="0.5 2@right:dot">content	with dot leader</p>
+```
+
+Note: Inside paragraphs, use `<tab>` or `<tab/>` to insert tab characters at positions defined by `tabs`.
 
 ---
 
@@ -698,11 +754,49 @@ font-family="Arial"
 font-size=24pt
 color=#2b5797
 bold=true
-space-before=18
-space-after=12
+space-before=18pt
+space-after=12pt
 border-bottom=1pt
 align=center
 ```
+
+### Heading Properties
+
+`<h1>` through `<h9>` accept the following properties. All properties are optional; defaults come from `[style]`.
+
+| Property            | Example                    | Description                                             |
+|---------------------|----------------------------|---------------------------------------------------------|
+| `font-family`       | `"Arial"`                  | Font family                                             |
+| `font-size`         | `24pt`                     | Font size (pt suffix MANDATORY)                         |
+| `color`             | `#2b5797`                  | Text color (hex or name)                                |
+| `bold`              | `true`                     | Bold weight                                             |
+| `italic`            | `true`                     | Italic style                                            |
+| `underline`         | `true`, `double`, `wavy`   | Underline style: `true`/`single`, `double`, `dotted`, `dash`, `wavy` |
+| `caps`              | `true`                     | All caps                                                |
+| `small-caps`        | `true`                     | Small caps                                              |
+| `letter-spacing`    | `1pt`                      | Letter spacing (pt suffix MANDATORY)                    |
+| `align`             | `center`                   | Text alignment: `left`, `center`, `right`, `justify`    |
+| `indent-left`       | `0.5`                      | Left indent (document unit)                             |
+| `indent-right`      | `0.5`                      | Right indent (document unit)                            |
+| `indent-hanging`    | `0.25`                     | Hanging indent (document unit)                          |
+| `first-line`        | `0.5`                      | First line indent (document unit)                       |
+| `space-before`      | `18pt`                     | Space before heading (layout unit)                      |
+| `space-after`       | `12pt`                     | Space after heading (layout unit)                       |
+| `line-spacing`      | `1.5`                      | Line spacing (multiplier or exact with unit)            |
+| `line-rule`         | `exact`                    | Line spacing rule: `auto`, `exact`, `atLeast`           |
+| `tabs`              | `"0.5 2@right:dot"`        | Tab stops (see Section 5.B.6)                           |
+| `border`            | `1pt`                      | Border on all sides                                      |
+| `border-bottom`     | `1pt`                      | Border on one side                                       |
+| `border-color`      | `#000000`                  | Border color (default `auto`)                           |
+| `shading`           | `#f0f0f0`                  | Background color                                         |
+| `keep-next`         | `true`                     | Keep with next paragraph                                |
+| `keep-lines`        | `true`                     | Keep lines together on same page                        |
+| `widow-control`     | `false`                    | Widow/orphan control                                    |
+| `contextual-spacing`| `true`                     | Remove space between same-style paragraphs              |
+| `section-break`     | `true`                     | Force section break before this heading                 |
+| `outline-level`     | `1`                        | Outline level 0–8 (for TOC generation)                  |
+| `dir`               | `rtl`                      | Text direction: `ltr`, `rtl`                            |
+| `valign`            | `center`                   | Vertical alignment: `auto`, `top`, `center`, `baseline`, `bottom` |
 
 ### Style Precedence
 
@@ -924,123 +1018,10 @@ Use meaningful aliases that reflect the data (e.g., `person`, `founder`, `order`
 </loop>
 </ol>                              # Use <loop:ol> instead; a standard <loop> inside a static list is forbidden
 ```
-
-## 9. CONDITIONALS
-
-Conditionally render content based on data values using `<if>`, `<elif>`, and `<else>`.
-
-### Tags
-
-| Tag | Description |
-|-----|-------------|
-| `<if var="expr">...</if>` | Render content only when `expr` is true. Standalone (simple) form. |
-| `<w-if use=[...]>...</w-if>` | Wrapper for an if/elif/else chain. MUST list every variable used in `use=[...]`. |
-| `<elif var="expr">...</elif>` | Additional branch inside `<w-if>` (optional, any number). |
-| `<else>...</else>` | Fallback branch inside `<w-if>` (optional, at most one, and MUST be last). |
-
-### Simple `<if>` (standalone)
-
-```text
-<if var="{{info.status}} == 'active'">
-<p>Visible only when status is active.</p>
-</if>
-```
-
-Rules:
-
-* Standalone `<if>` renders its content only when the condition is true; otherwise the content is dropped.
-* Both `{{path}}` and bare paths are supported: `var="{{info.status}} == 'active'"` or `var="info.status == 'active'"`.
-* A bareword resolves to data when present; otherwise it is treated as a **literal string**.
-* A `{{path}}` left unresolved after variable resolution means the variable is missing and is treated as **empty** (use with `is empty`).
-* `<elif>` and `<else>` are NOT allowed outside a `<w-if>` wrapper.
-
-### `<w-if>` chain
-
-```text
-<w-if use=[info.role]>
-<if var="info.role == 'admin'">
-<p>Admin panel</p>
-</if>
-<elif var="info.role == 'editor'">
-<p>Editor workspace</p>
-</elif>
-<else>
-<p>Read-only view</p>
-</else>
-</w-if>
-```
-
-Rules:
-
-* `<w-if>` MUST contain exactly one `<if>` first, then zero or more `<elif>`, then at most one `<else>` (last).
-* Branches close themselves: `<if>...</if>`, `<elif>...</elif>`, `<else>...</else>`.
-* No other content is allowed between the branch tags inside `<w-if>` (compile error).
-* The first branch whose condition is true is rendered; the rest are dropped. If no branch matches and there is no `<else>`, nothing is rendered.
-* Nested `<if>`/`<w-if>` blocks are allowed inside any branch body.
-
-### `use=` — declared variables
-
-`use=[...]` MUST list every variable referenced by the branch conditions:
-
-* Root keys and dotted paths: `info`, `info.role`, `founder.name`
-* Loop aliases and fields: `x`, `x.done`
-* Loop index variables: `index`, `lastIndex`, `totalIndex`
-
-Any reference in a branch `var=` that is not covered by a `use=` entry is a **compile error**. A reference is covered when it equals a `use=` entry or is an ancestor/descendant of one (e.g. `use=[info]` covers `info.role`).
-
-Literals inside `<w-if>` conditions MUST be quoted — barewords are always variables: `var="info.role == 'admin'"`.
-
-### Operators
-
-| Operator | Meaning |
-|----------|---------|
-| `==`, `!=` | Equality / inequality |
-| `>`, `>=`, `<`, `<=` | Comparison (numeric when both sides are numbers, else string) |
-| `is empty` | Operand is an empty or missing value |
-| `is not empty` | Operand has a value |
-| `and` | Logical AND (binds tighter than `or`) |
-| `or` | Logical OR |
-| `( ... )` | Grouping |
-
-Examples:
-
-```text
-<if var="info.total > 100 and (info.limit == 0 or info.limit >= info.total)">
-<if var="{{missing}} is empty">placeholder</if>
-<if var="info.name is not empty">{{info.name}}</if>
-<if var="count >= 5 and count <= 10">in range</if>
-```
-
-### Conditions inside loops
-
-Inside a loop, bare `x.field` references in `var=` and `use=[...]` resolve per item, and the loop index variables are available:
-
-```text
-<loop:ul x from items>
-<li>
-<if var="x.done == 'yes'">
-<p><b>{{x.label}}</b></p>
-</if>
-<if var="index == lastIndex">
-<p><i>Last item: {{x.label}}</i></p>
-</if>
-</li>
-</loop:ul>
-```
-
-* `x.field` — the current item's field
-* `index` — current position (1-based, respects `indexType`)
-* `lastIndex` / `totalIndex` — last position / total count
-
-The `{{...}}` forms work too (`{{x.field}}`, `{{index}}`, `{{lastIndex}}`, `{{totalIndex}}`). To test a possibly missing field, prefer `{{x.field}} is empty`.
-
-### Evaluation order
-
-Conditions are evaluated after variable resolution (`{{...}}`) and loop expansion, so values are final before any branch is chosen.
-
+ 
 ---
 
-## 10. LINKS
+## 9. LINKS
 
 Internal and external hyperlinks.
 
@@ -1084,7 +1065,7 @@ Inline:
 
 ---
 
-## 11. METADATA
+## 10. METADATA
 
 ```ini
 [title]
@@ -1095,7 +1076,7 @@ author=   # accessible as {{author}}
 
 ```
 
-## 12. HEADER & FOOTER
+## 11. HEADER & FOOTER
 
 Header and footer for document pages.
 
@@ -1179,7 +1160,7 @@ margin=0.2
 first-page=false
 ```
 
-## 13. THE PREDICTABLE VS. UNPREDICTABLE RULE (ZERO TOLERANCE)
+## 12. THE PREDICTABLE VS. UNPREDICTABLE RULE (ZERO TOLERANCE)
 
 The predictable input defines the initial schema available to the compiler.
 

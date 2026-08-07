@@ -16,6 +16,12 @@ These rules are MANDATORY for opencode and any AI agent operating in this reposi
 
 6. **Keep Knowledge Graph Updated** — After any codebase changes (new features, refactoring, bug fixes), run `graphify update .` to update the knowledge graph. This ensures the graph reflects the current state of the codebase for accurate queries and analysis.
 
+7. **SKILL.md Changes Are Feature-Only** — Changes to `.agents/skills/dcd-documents/SKILL.md` are permitted ONLY as feature additions or feature removals (e.g., introducing a new DCD construct, or removing support for an existing one). Restyling, rewording, restructuring, or any other non-feature edits to that file are not permitted without explicit user approval.
+
+8. **Every Change Requires User Double-Check** — Every change must be double-checked by the user before it is considered done. After making any change, present the result for user review and wait for approval before committing, pushing, or treating the task as complete.
+
+9. **Planning Is Mandatory Before Changes** — Planning MUST be done before starting any change. Present a plan (e.g., a todo list or a short written plan) to the user and get approval before executing any modification.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

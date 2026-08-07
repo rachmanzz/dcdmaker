@@ -22,7 +22,8 @@ func buildPrompt(userPrompt string, predictableKeys []KeyDef) string {
 	b.WriteString("- STATIC text (paragraphs, headings, labels, fixed wording) MUST appear in the DCD template verbatim, exactly once, in the original order.\n")
 	b.WriteString("- DYNAMIC content (data values, names, dates, amounts — anything that will be filled by a variable) MUST be replaced by its {{var}} / {{var.field}} placeholder. Never write the source value literally for dynamic content; never drop it either.\n")
 	b.WriteString("Never drop, skip, omit, merge, truncate, reorder, or summarize any source text. The full document must be representable from your template.\n\n")
-	b.WriteString("INLINE ATTRIBUTES: Preserve inline tag attributes verbatim when the DCD equivalent tag supports them. Examples: <u underline=\"double\"> → <set:u underline=double>; <span highlight=\"yellow\"> → <mark color=yellow>; <a href=...> keeps target/color/underline. Do NOT strip, rename, or flatten an inline attribute into a [style] block or a paragraph attribute when the inline tag accepts it. Only fall back when DCD has no inline equivalent.\n\n")
+	b.WriteString("INLINE ATTRIBUTES: Preserve inline tag attributes verbatim when the DCD equivalent tag supports them. Examples: <u underline=\"double\"> → <set:u underline=double>; <span highlight=\"yellow\"> → <mark color=yellow>; <a href=...> keeps target/color/underline. Do NOT strip, rename, or flatten an inline attribute into a [style] block or a paragraph attribute when the inline tag accepts it. Only fall back when DCD has no inline equivalent.\n")
+	b.WriteString("TAB PRESERVATION: If the source document (words-xml) defines tab stops on a paragraph AND uses <tab/> inside that paragraph, BOTH must be preserved in DCD. The tabs attribute on <p> defines positions; <tab/> marks where tabs occur. Never drop either — they work together.\n\n")
 
 	b.WriteString("=== DCD DSL SPECIFICATION ===\n")
 	b.WriteString(dcdSpec)
